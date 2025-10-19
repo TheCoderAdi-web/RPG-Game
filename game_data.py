@@ -9,7 +9,7 @@ WALK_STEPS: int = 450
 level_size: int = GRID_SIZE # Use the generator's size
 
 # Symbols for map rendering (0:Wall, 1:Floor, 2:Treasure/Exit, 4:Entrance)
-MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: 'T', 4: ' '}
+MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: ' ', 4: ' '}
 
 # Classes for each Entity
 class Enemy:
@@ -63,11 +63,9 @@ class Player:
                 self.y, self.x = new_y, new_x
                 return "Moved"
             else:
-                print("You hit a wall!")
                 return "Wall"
         else:
             # Hitting the boundary of the map
-            print("You feel a strange force at the edge of the world...")
             return "NextLevel" # Signal for new level generation
 
 class Chest:

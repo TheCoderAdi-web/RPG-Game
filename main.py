@@ -102,11 +102,6 @@ def main() -> None:
                     if not chest.opened and (player.x, player.y) == (chest.x, chest.y):
                         chest.open(player)
 
-                # Check for exit tile (2 - 'T' in symbols)
-                if dungeon_map[player.y, player.x] == 2:
-                    print("You found the exit tile (T)! Moving deeper into the dungeon...")
-                    game_state = "next_level_transition"
-
                 if player.health <= 0:
                     game_state = "game_over"
 
@@ -118,7 +113,6 @@ def main() -> None:
                 enemies, chests = generate_entities(dungeon_map)
                 game_state = "playing"
                 print("\033c", end="")
-                print(f"New dungeon generated. Continue exploring!")
 
             elif game_state == "game_over":
                 print("\033c", end="")
@@ -133,9 +127,6 @@ def main() -> None:
                 print("\033c", end="")
                 print(f"You encountered an enemy at ({current_enemy.x}, {current_enemy.y})!")
                 game_state, player.health = enemy_encounter(game_state, current_enemy, player)
-                # After the fight, if successful, the enemy is essentially gone
-                # and the player is back in the 'playing' state.
-                # The defeated enemy is no longer drawn because of the check in print_grid.
 
 
 if __name__ == "__main__":

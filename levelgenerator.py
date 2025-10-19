@@ -9,7 +9,7 @@ from game_data import Enemy, Chest, level_size, GRID_SIZE, WALK_STEPS
 def generate_random_walk_dungeon(grid_size: int, steps: int) -> npt.NDArray[np.int_]:
     """Generates a dungeon map using a random walk algorithm.
 
-    Map key: 0=Wall (█), 1=Floor ( ), 2=Treasure/Exit (T), 4=Entrance ( )
+    Map key: 0=Wall (█), 1=Floor ( ), 2=Exit (now Floor), 4=Entrance ( )
     """
     grid: npt.NDArray[np.int_] = np.zeros((grid_size, grid_size), dtype=int)
 
@@ -36,23 +36,15 @@ def generate_random_walk_dungeon(grid_size: int, steps: int) -> npt.NDArray[np.i
             row, col = new_row, new_col
             grid[row, col] = 1
 
-    # Set start and end points
+    # Set start point
     start_row, start_col = grid_size // 2, grid_size // 2
-    end_row, end_col = row, col
 
     # Entrance (4) - player spawn
     grid[start_row, start_col] = 4
 
-    # Exit/Treasure (2) - only place if start and end are different
-    if (start_row, start_col) != (end_row, end_col):
-        if grid[end_row, end_col] == 1:
-            grid[end_row, end_col] = 2
-        else:
-            # If the end is on a wall, find a random floor tile for the exit
-            floor_tiles = np.argwhere(grid == 1)
-            if floor_tiles.size > 0:
-                end_tile = r.choice(floor_tiles)
-                grid[end_tile[0], end_tile[1]] = 2
+    # Remove the Exit tile (2) functionality:
+    # Any tile with a value of 2 is explicitly converted back to floor (1).
+    grid[grid == 2] = 1
 
     return grid
 
