@@ -71,8 +71,8 @@ def generate_entities(dungeon_map: npt.NDArray[np.int_]) -> Tuple[List[Enemy], L
     chests: List[Chest] = []
 
     # Simple logic: up to 3 enemies and 2 chests
-    num_enemies = min(3, len(floor_tiles) // 3)
-    num_chests = min(2, len(floor_tiles) // 4)
+    num_enemies = min(r.randint(1, 4), len(floor_tiles) // 3)
+    num_chests = min(r.randint(1, 3), len(floor_tiles) // 4)
 
     # Place entities on unique floor tiles
     used_tiles = set()

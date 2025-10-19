@@ -4,7 +4,7 @@ import numpy as np
 import numpy.typing as npt
 
 # --- Global Variables for Level Generation ---
-GRID_SIZE: int = 15
+GRID_SIZE: int = 14
 WALK_STEPS: int = 450
 level_size: int = GRID_SIZE # Use the generator's size
 
