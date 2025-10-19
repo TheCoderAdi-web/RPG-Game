@@ -126,6 +126,7 @@ def enemy_encounter(game_state: str, enemy: Enemy, player: Player) -> tuple[str,
             break
         elif action == 'R':
             print("You chose to run away!")
+            # Running away puts the player back on the map, but the enemy is still there.
             game_state = "playing"
             break
         else:

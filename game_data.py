@@ -1,5 +1,15 @@
-# Global Variables
-level_size: int = 10
+# Import necessary type hints and numpy
+from typing import Dict, Tuple, List
+import numpy as np
+import numpy.typing as npt
+
+# --- Global Variables for Level Generation ---
+GRID_SIZE: int = 15
+WALK_STEPS: int = 450
+level_size: int = GRID_SIZE # Use the generator's size
+
+# Symbols for map rendering (0:Wall, 1:Floor, 2:Treasure/Exit, 4:Entrance)
+MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: 'T', 4: ' '}
 
 # Classes for each Entity
 class Enemy:
@@ -19,25 +29,46 @@ class Player:
         self.health = health
         self.weapon = weapon
 
-    def move(self) -> None:
+    def move(self, dungeon_map: npt.NDArray[np.int_]) -> str:
+        """Move the player based on input, checking for walls and level bounds.
+        Returns a string indicating the result of the move.
+        """
         direction = input("Move (W/A/S/D). Enter (H) to Heal: ").strip().upper()
-        if direction == 'W' and self.y > 0:
-            self.y -= 1
-        elif direction == 'S' and self.y < level_size - 1:
-            self.y += 1
-        elif direction == 'A' and self.x > 0:
-            self.x -= 1
-        elif direction == 'D' and self.x < level_size - 1:
-            self.x += 1
+        dr, dc = 0, 0
+
+        # Determine change in coordinates (dr: delta row/y, dc: delta column/x)
+        if direction == 'W': dr, dc = -1, 0
+        elif direction == 'S': dr, dc = 1, 0
+        elif direction == 'A': dr, dc = 0, -1
+        elif direction == 'D': dr, dc = 0, 1
         elif direction == 'H':
+            # Handle healing
             if self.health < 5:
                 self.health += 1
                 print("You healed 1 health point.")
             else:
                 print("Health is already full.")
             input("Press Enter to continue...")
+            return "Healed" # Not a positional move
         else:
-            print("Invalid move or out of bounds.")
+            print("Invalid input.")
+            return "Invalid"
+
+        new_y, new_x = self.y + dr, self.x + dc
+        map_height, map_width = dungeon_map.shape
+
+        if 0 <= new_y < map_height and 0 <= new_x < map_width:
+            # Check if the new tile is a Wall (0)
+            if dungeon_map[new_y, new_x] != 0:
+                self.y, self.x = new_y, new_x
+                return "Moved"
+            else:
+                print("You hit a wall!")
+                return "Wall"
+        else:
+            # Hitting the boundary of the map
+            print("You feel a strange force at the edge of the world...")
+            return "NextLevel" # Signal for new level generation
 
 class Chest:
     """Class representing a chest in the game."""
@@ -53,6 +84,7 @@ class Chest:
             print(f"You found a {self.item}!")
             player.weapon = self.item
             self.opened = True
+            input("Press Enter to continue...")
         else:
             print("The chest is empty.")
             input("Press Enter to continue...")
