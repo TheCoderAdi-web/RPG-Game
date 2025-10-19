@@ -1,7 +1,7 @@
 import numpy as np
 import random as r
 
-from typing import Dict, Tuple, List, Literal
+from typing import Dict, Tuple, List, Literal, Optional
 import numpy.typing as npt
 # Import necessary entities and constants from game_data
 from game_data import Enemy, Chest, level_size, GRID_SIZE, WALK_STEPS
@@ -62,6 +62,13 @@ def find_entrance(grid: npt.NDArray[np.int_]) -> Tuple[int, int]:
         grid_size = grid.shape[0]
         return grid_size // 2, grid_size // 2
 
+def get_unique_tile(floor_tiles: npt.NDArray[np.int_], used_tiles: set) -> Optional[Tuple[int, int]]:
+    for row, col in floor_tiles:  # row corresponds to y, col corresponds to x
+        if (col, row) not in used_tiles:  # check using (x, y) format
+            used_tiles.add((col, row))  # add using (x, y) format
+            return (col, row)  # return as (x, y)
+    return None
+
 def generate_entities(dungeon_map: npt.NDArray[np.int_]) -> Tuple[List[Enemy], List[Chest]]:
     """Places enemies and chests randomly on floor tiles (1) in the dungeon map."""
     floor_tiles = np.argwhere(dungeon_map == 1)
@@ -70,32 +77,26 @@ def generate_entities(dungeon_map: npt.NDArray[np.int_]) -> Tuple[List[Enemy], L
     enemies: List[Enemy] = []
     chests: List[Chest] = []
 
-    # Simple logic: up to 3 enemies and 2 chests
-    num_enemies = min(r.randint(1, 4), len(floor_tiles) // 3)
-    num_chests = min(r.randint(1, 3), len(floor_tiles) // 4)
+    # Simple logic: up to 2 enemies and 1 chests
+    num_enemies = min(r.randint(1, 3), len(floor_tiles) // 3)
+    num_chests = min(1, len(floor_tiles) // 4)
 
     # Place entities on unique floor tiles
     used_tiles = set()
 
-    def get_unique_tile():
-        for i in range(len(floor_tiles)):
-            y, x = floor_tiles[i]
-            if (x, y) not in used_tiles:
-                used_tiles.add((x, y))
-                return x, y
-        return None, None
-
     # Place enemies
     for _ in range(num_enemies):
-        x, y = get_unique_tile()
-        if x is not None:
+        result = get_unique_tile(floor_tiles, used_tiles)
+        if result is not None:
+            x, y = result
             enemies.append(Enemy(x, y))
 
     # Place chests
-    possible_items = ["Bow", "Sword"]
+    possible_items = ["Poison Bow", "Sword"]
     for _ in range(num_chests):
-        x, y = get_unique_tile()
-        if x is not None:
+        result = get_unique_tile(floor_tiles, used_tiles)
+        if result is not None:
+            x, y = result
             item = r.choice(possible_items)
             chests.append(Chest(x, y, item))
 

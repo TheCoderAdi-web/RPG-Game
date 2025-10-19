@@ -1,0 +1,10 @@
+{
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": false,
+  "reportMissingImports": false,
+  "reportOptionalMemberAccess": false,
+  "exclude": [
+    "**/venv",
+    "**/__pycache__"
+  ]
+}

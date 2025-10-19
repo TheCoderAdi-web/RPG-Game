@@ -2,7 +2,7 @@
 from typing import List
 from fight import fight, enemy_encounter
 # Updated imports for new data structure
-from game_data import Enemy, Player, Chest, level_size, MAP_SYMBOLS, GRID_SIZE
+from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE
 from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities, WALK_STEPS
 import numpy as np
 import numpy.typing as npt

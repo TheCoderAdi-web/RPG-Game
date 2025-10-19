@@ -19,6 +19,7 @@ class Enemy:
         self.x = x
         self.y = y
         self.health = health
+        self.status = "None"
 
 class Player:
     """Class representing the player in the game."""
@@ -28,6 +29,7 @@ class Player:
         self.y = y
         self.health = health
         self.weapon = weapon
+        self.status = "None"
 
     def move(self, dungeon_map: npt.NDArray[np.int_]) -> str:
         """Move the player based on input, checking for walls and level bounds.
