@@ -4,12 +4,39 @@ import numpy as np
 import numpy.typing as npt
 
 # --- Global Variables for Level Generation ---
-GRID_SIZE: int = 14
+GRID_SIZE: int = 25
 WALK_STEPS: int = 450
 level_size: int = GRID_SIZE # Use the generator's size
 
-# Symbols for map rendering (0:Wall, 1:Floor, 2:Treasure/Exit, 4:Entrance)
-MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: ' ', 4: ' '}
+# Symbols for map rendering (0:Wall, 1:Floor, 2:Treasure, 4:Entrance)
+MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: '💰', 4: '🏰'}
+
+# Weapon damage dictionary
+WEAPON_DAMAGE = {
+    "Sword": (2, 4),
+    "Poison Bow": (1, 2),
+    "Fists": (1, 2)
+}
+
+# Weapon Status Effects dictionary
+WEAPON_STATUS_EFFECTS = {
+    "Poison Bow": "None",
+    "Sword": "None",
+    "Fists": "None"
+}
+
+# Outcomes for Player Defend vs Enemy Attack
+PLAYER_DEFENCE_OUTCOMES = {
+    0: "Enemy attacks! You defended and take no damage!",
+    1: "Enemy attacks! You failed to defend. You take 1 damage!",
+    2: "Enemy Heals while you defended! No damage taken."
+}
+
+ENEMY_DEFENCE_OUTCOMES = {
+    0: "Enemy defends and blocks your attack!",
+    1: "Enemy's block is broken! You deal damage!",
+    2: "Enemy parries your attack and counters! You take 1 damage!"
+}
 
 # Classes for each Entity
 class Enemy:
@@ -20,6 +47,7 @@ class Enemy:
         self.y = y
         self.health = health
         self.status = "None"
+        self.status_duration = 0
 
 class Player:
     """Class representing the player in the game."""
@@ -29,7 +57,6 @@ class Player:
         self.y = y
         self.health = health
         self.weapon = weapon
-        self.status = "None"
 
     def move(self, dungeon_map: npt.NDArray[np.int_]) -> str:
         """Move the player based on input, checking for walls and level bounds.
