@@ -1,7 +1,7 @@
 # Import necessary modules and classes
 from typing import Tuple
 from random import randint
-from game_data import Enemy, Player, WEAPON_DAMAGE, WEAPON_STATUS_EFFECTS, PLAYER_DEFENCE_OUTCOMES, ENEMY_DEFENCE_OUTCOMES
+from game_data import Enemy, Player, WEAPON_DAMAGE, WEAPON_STATUS_EFFECTS, PLAYER_DEFENCE_OUTCOMES, ENEMY_DEFENCE_OUTCOMES, clear_terminal
 
 def enemy_turn(player_action: str) -> tuple[str, str]:
     """Determine and process the enemy's action. Returns (enemy_action, message)."""
@@ -67,7 +67,7 @@ def fight(health: int, enemy_health: int, enemy_status: str, weapon: str) -> Tup
     is_critical_hit: bool = False # New flag to track critical hit
 
     while health > 0 and enemy_health > 0:
-        print("\033c", end="")
+        clear_terminal()
         print(f"\nYour Health: {health} | Enemy Health: {enemy_health}")
 
         # Player's Turn
@@ -147,7 +147,7 @@ def enemy_encounter(game_state: str, enemy: Enemy, player: Player) -> tuple[str,
     while True:
 
         # Choose to Fight or Run
-        print("\033c", end="")
+        clear_terminal()
         action = input("Do you want to (F)ight or (R)un away? ").upper()
 
         # Player chooses to fight

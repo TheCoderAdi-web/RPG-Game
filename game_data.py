@@ -1,6 +1,8 @@
 from typing import Dict, Tuple, List, Optional
 import numpy as np
 import numpy.typing as npt
+import os
+import platform
 
 # --- Global Variables for Level Generation ---
 GRID_SIZE: int = 25
@@ -36,6 +38,16 @@ ENEMY_DEFENCE_OUTCOMES: Dict[int, str] = {
     1: "Enemy's block is broken! You deal damage!",
     2: "Enemy parries your attack and counters! You take 1 damage!"
 }
+
+# Function to clear the terminal
+def clear_terminal() -> None:
+    """Clears the console screen using OS-specific commands."""
+    # Check the operating system
+    if platform.system() == "Windows":
+        os.system('cls')  # Command for Windows
+    else:
+        # Command for Linux and macOS (POSIX systems)
+        os.system('clear')
 
 # Classes for Entities
 class Enemy:

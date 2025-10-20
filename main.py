@@ -2,12 +2,12 @@ from typing import List, Tuple, Optional
 import numpy as np
 import numpy.typing as npt
 from fight import enemy_encounter
-from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState
+from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState, clear_terminal
 from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities
 
 def print_UI(state: GameState) -> None:
     """Print the player UI with name, weapon, and health."""
-    print("\033c", end="")
+    clear_terminal()
     print(f"Player: {state.name}")
     print(f"Player Weapon: {state.player.weapon}")
     print(f"Level: {state.level}")
@@ -60,7 +60,7 @@ def transition_to_next_level(state: GameState) -> None:
     state.dungeon_map = dungeon_map
     state.level += 1
     state.game_state = "playing"
-    print("\033c", end="")
+    clear_terminal()
 
 def update_game_state(state: GameState) -> None:
     """Handles player movement, checks for entity interactions, and updates the GameState."""
@@ -102,7 +102,7 @@ def main() -> None:
 
             elif state.game_state == "enemy_encounter":
                 if state.current_enemy:
-                    print("\033c", end="")
+                    clear_terminal()
                     print(f"You encountered an enemy at ({state.current_enemy.x}, {state.current_enemy.y})!")
                     
                     # enemy_encounter returns (new_game_state, player_health)
@@ -116,7 +116,7 @@ def main() -> None:
                     
                     state.current_enemy = None
 
-        print("\033c", end="")
+        clear_terminal()
         print("Game Over!")
         restart = input("Do you want to play again? (Y/N): ").strip().upper()
         if restart != 'Y':
