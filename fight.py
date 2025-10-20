@@ -18,7 +18,7 @@ def enemy_turn(player_action: str) -> tuple[str, str]:
         if player_action == 'A':
             return enemy_action, ENEMY_DEFENCE_OUTCOMES[randint(0, 2)]
         else:
-            return enemy_action, "Enemy defends and blocks your attack!"
+            return enemy_action, "Both you and the enemy are defending. A stalemate occurs."
     elif enemy_action == 'H':
         return enemy_action, "Enemy heals and regains 1 health."
     else:
