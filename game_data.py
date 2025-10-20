@@ -8,7 +8,7 @@ WALK_STEPS: int = 450
 level_size: int = GRID_SIZE
 
 # Symbols for map rendering (0:Wall, 1:Floor, 2:Treasure, 4:Entrance)
-MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: '💰', 4: '🏰'}
+MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: 'C', 4: ' '}
 
 # Weapon damage dictionary (Base, Crit)
 WEAPON_DAMAGE: Dict[str, Tuple[int, int]] = {
