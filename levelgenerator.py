@@ -9,7 +9,7 @@ from game_data import Enemy, Chest, level_size, GRID_SIZE, WALK_STEPS
 def generate_random_walk_dungeon(grid_size: int, steps: int) -> npt.NDArray[np.int_]:
     """Generates a dungeon map using a random walk algorithm.
 
-    Map key: 0=Wall (█), 1=Floor ( ), 2=Exit (now Floor), 4=Entrance ( )
+    Map key: 0=Wall (█), 1=Floor, 2=Floor, 4=Entrance
     """
     grid: npt.NDArray[np.int_] = np.zeros((grid_size, grid_size), dtype=int)
 

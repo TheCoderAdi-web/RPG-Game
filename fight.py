@@ -109,12 +109,12 @@ def fight(health: int, enemy_health: int, enemy_status: str, weapon: str) -> Tup
 
         # Critical Hit Message
         if is_critical_hit:
-            print("Your attack was a Critical Hit! 💥")
+            print("Your attack was a Critical Hit!")
 
         # Enemy Heal Disrupted Message
         if action == 'A' and enemy_action == 'H':
             # The enemy is healing, but the player attacked, interrupting the heal.
-            print("The Enemy's Heal was Disrupted by your Attack. They lose 1 HP! ⚔️")
+            print("The Enemy's Heal was Disrupted by your Attack. They lose 1 HP!")
         
         input("Press Enter to continue...")
 
@@ -124,7 +124,7 @@ def fight(health: int, enemy_health: int, enemy_status: str, weapon: str) -> Tup
         # Apply Poison Effect if applicable
         if status_effect == "Poisoned":
             enemy_health -= 1
-            print("The enemy takes 1 poison damage! 🧪")
+            print("The enemy takes 1 poison damage!")
             input("Press Enter to continue...")
 
         # The enemy has been defeated

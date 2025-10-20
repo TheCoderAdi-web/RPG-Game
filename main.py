@@ -1,137 +1,127 @@
-# Import necessary modules and classes
-from typing import List
+from typing import List, Tuple, Optional
 import numpy as np
 import numpy.typing as npt
-from fight import fight, enemy_encounter
-from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE
-from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities, WALK_STEPS
+from fight import enemy_encounter
+from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState
+from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities
 
-def print_UI(player: Player, name: str, level: int) -> None:
+def print_UI(state: GameState) -> None:
     """Print the player UI with name, weapon, and health."""
     print("\033c", end="")
-    print(f"Player: {name}")
-    print(f"Player Weapon: {player.weapon}")
-    print(f"Level: {level}")
-    # Print health hearts
-    for _ in range(player.health):
+    print(f"Player: {state.name}")
+    print(f"Player Weapon: {state.player.weapon}")
+    print(f"Level: {state.level}")
+    for _ in range(state.player.health):
         print("♥", end=" ")
     print("\n")
 
-def print_grid(player: Player, enemies: List[Enemy], chests: List[Chest], dungeon_map: npt.NDArray[np.int_], name: str, level: int) -> None:
+def print_grid(state: GameState) -> None:
     """Print the game grid with player and entities overlayed on the dungeon map."""
-    print_UI(player, name, level)
+    print_UI(state)
 
-    # Convert the numpy array map to a list of symbols
     grid_symbols: List[List[str]] = []
-    for r in range(dungeon_map.shape[0]):
+    for r in range(state.dungeon_map.shape[0]):
         row_symbols: list[str] = []
-        for c in range(dungeon_map.shape[1]):
-            # Start with the map symbol (Wall, Floor, etc.)
-            symbol = MAP_SYMBOLS.get(int(dungeon_map[r, c]), '?')
+        for c in range(state.dungeon_map.shape[1]):
+            symbol = MAP_SYMBOLS.get(int(state.dungeon_map[r, c]), '?')
             row_symbols.append(symbol)
         grid_symbols.append(row_symbols)
 
-    # Overlay Entities (E and 💰 must be drawn over the map symbol)
-    for enemy in enemies:
+    for enemy in state.enemies:
         if enemy.health > 0:
             grid_symbols[enemy.y][enemy.x] = 'E'
-    for chest in chests:
+    for chest in state.chests:
         if not chest.opened:
-            grid_symbols[chest.y][chest.x] = MAP_SYMBOLS[2]  # Treasure symbol
+            grid_symbols[chest.y][chest.x] = MAP_SYMBOLS[2]
 
-    # Overlay Player
-    grid_symbols[player.y][player.x] = 'P'
+    grid_symbols[state.player.y][state.player.x] = 'P'
 
-    # Print the resulting grid
     for row in grid_symbols:
         print(' '.join(row))
 
-def print_grid_and_update(player: Player, enemies: List[Enemy], chests: List[Chest], dungeon_map: npt.NDArray[np.int_], name: str, level: int) -> str:
+def print_grid_and_update(state: GameState) -> str:
     """Print the grid, get player move, and update player position based on input."""
-    print_grid(player, enemies, chests, dungeon_map, name, level)
-    # The player.move() is now modified to take the dungeon map
-    move_result = player.move(dungeon_map)
+    print_grid(state)
+    move_result = state.player.move(state.dungeon_map)
     return move_result
 
-def start(level: int) -> tuple[Player, List[Enemy], List[Chest], npt.NDArray[np.int_], str, str]:
-    """Start a new game session, generating the first level."""
+def initialize_game() -> GameState:
+    """Handles initial player setup and returns the initial GameState object."""
     name: str = input("Enter your name: ")
-    # Player starts at (0, 0); coordinates will be set by level generation
-    player: Player = Player(0, 0, 5, "Fists")
-    game_state: str = "playing"
+    player: Player = Player(0, 0)
+    return GameState(name, player)
 
-    # Generate the first dungeon map
+def transition_to_next_level(state: GameState) -> None:
+    """Generates a new level, places the player, and updates the GameState object."""
     dungeon_map = generate_random_walk_dungeon(GRID_SIZE, WALK_STEPS)
     start_x, start_y = find_entrance(dungeon_map)
+    state.player.x, state.player.y = start_x, start_y
+    state.enemies, state.chests = generate_entities(dungeon_map)
+    state.dungeon_map = dungeon_map
+    state.level += 1
+    state.game_state = "playing"
+    print("\033c", end="")
 
-    # Place player at the entrance
-    player.x, player.y = start_x, start_y
+def update_game_state(state: GameState) -> None:
+    """Handles player movement, checks for entity interactions, and updates the GameState."""
+    
+    move_result = print_grid_and_update(state)
+    state.current_enemy = None
 
-    # Generate enemies and chests on the floor tiles
-    enemies, chests = generate_entities(dungeon_map)
+    if move_result == "NextLevel":
+        state.game_state = "next_level_transition"
+        return
 
-    print_grid(player, enemies, chests, dungeon_map, name, level)
+    for enemy in state.enemies:
+        if enemy.health > 0 and (state.player.x, state.player.y) == (enemy.x, enemy.y):
+            state.game_state = "enemy_encounter"
+            state.current_enemy = enemy
+            return
 
-    return player, enemies, chests, dungeon_map, game_state, name
+    for chest in state.chests:
+        if not chest.opened and (state.player.x, state.player.y) == (chest.x, chest.y):
+            chest.open(state.player)
+
+    if state.player.health <= 0:
+        state.game_state = "game_over"
+
 
 def main() -> None:
-    """Main game loop."""
-    level: int = 1
+    """Main game loop for continuous sessions, handling setup, transitions, and state changes."""
 
     while True:
-        # Start the game and generate the first level
-        player, enemies, chests, dungeon_map, game_state, name = start(level)
-        current_enemy = None
+        state = initialize_game()
 
-        while True:
-            # Handle different game states
-            if game_state == "playing":
-                # print_grid_and_update returns the result of the move
-                move_result = print_grid_and_update(player, enemies, chests, dungeon_map, name, level)
+        while state.game_state != "game_over":
+            
+            if state.game_state == "playing":
+                update_game_state(state)
 
-                if move_result == "NextLevel":
-                    # Transition triggered by hitting the map boundary
-                    game_state = "next_level_transition"
+            elif state.game_state == "next_level_transition":
+                transition_to_next_level(state)
 
-                # Check for encounters
-                for enemy in enemies:
-                    if enemy.health > 0 and (player.x, player.y) == (enemy.x, enemy.y):
-                        game_state = "enemy_encounter"
-                        current_enemy = enemy
-                        break
+            elif state.game_state == "enemy_encounter":
+                if state.current_enemy:
+                    print("\033c", end="")
+                    print(f"You encountered an enemy at ({state.current_enemy.x}, {state.current_enemy.y})!")
+                    
+                    # enemy_encounter returns (new_game_state, player_health)
+                    new_state, player_health = enemy_encounter(state.game_state, state.current_enemy, state.player)
+                    
+                    state.game_state = new_state
+                    state.player.health = player_health
 
-                for chest in chests:
-                    if not chest.opened and (player.x, player.y) == (chest.x, chest.y):
-                        chest.open(player)
+                    if state.game_state == "playing" and state.current_enemy.health <= 0:
+                        state.current_enemy.health = 0
+                    
+                    state.current_enemy = None
 
-                if player.health <= 0:
-                    game_state = "game_over"
-
-            elif game_state == "next_level_transition":
-                # Generate a new level
-                dungeon_map = generate_random_walk_dungeon(GRID_SIZE, WALK_STEPS)
-                start_x, start_y = find_entrance(dungeon_map)
-                player.x, player.y = start_x, start_y
-                enemies, chests = generate_entities(dungeon_map)
-                level += 1
-                game_state = "playing"
-                print("\033c", end="")
-
-            elif game_state == "game_over":
-                print("\033c", end="")
-                print("Game Over!")
-                restart = input("Do you want to play again? (Y/N): ").strip().upper()
-                if restart == 'Y':
-                    break  # Break inner loop to restart game
-                else:
-                    print("Thanks for playing!")
-                    return
-                
-            elif game_state == "enemy_encounter":
-                print("\033c", end="")
-                print(f"You encountered an enemy at ({current_enemy.x}, {current_enemy.y})!")
-                game_state, player.health = enemy_encounter(game_state, current_enemy, player)
-
+        print("\033c", end="")
+        print("Game Over!")
+        restart = input("Do you want to play again? (Y/N): ").strip().upper()
+        if restart != 'Y':
+            print("Thanks for playing!")
+            break
 
 if __name__ == "__main__":
     main()
