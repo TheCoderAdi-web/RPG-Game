@@ -5,6 +5,75 @@ from fight import enemy_encounter
 from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState, clear_terminal
 from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities
 
+def transition_to_next_level(state: GameState) -> None:
+    """Generates a new level, places the player, and updates the GameState object."""
+    dungeon_map = generate_random_walk_dungeon(GRID_SIZE, WALK_STEPS)
+    start_y, start_x = find_entrance(dungeon_map)
+    state.player.y, state.player.x = start_y, start_x
+    state.enemies, state.chests = generate_entities(dungeon_map)
+
+    state.dungeon_map = dungeon_map
+    state.level += 1
+    state.game_state = "playing"
+    clear_terminal()
+
+def update_game_state(state: GameState) -> None:
+    """Handles player movement, checks for entity interactions, and updates the GameState."""
+    
+    move_result = print_grid_and_update(state)
+    state.current_enemy = None
+
+    if move_result == "NextLevel":
+        state.game_state = "next_level_transition"
+        return
+
+    for enemy in state.enemies:
+        if enemy.health > 0 and (state.player.y, state.player.x) == (enemy.y, enemy.x):
+            state.game_state = "enemy_encounter"
+            state.current_enemy = enemy
+            return
+
+    for chest in state.chests:
+        if not chest.opened and (state.player.y, state.player.x) == (chest.y, chest.x):
+            chest.open(state.player)
+
+    if state.player.health <= 0:
+        state.game_state = "game_over"
+
+def handle_playing(state: GameState):
+    update_game_state(state)
+
+def handle_next_level_transition(state: GameState):
+    transition_to_next_level(state)
+
+def handle_enemy_encounter(state: GameState):
+    if state.current_enemy:
+        clear_terminal()
+        print(f"You encountered an enemy at ({state.current_enemy.x}, {state.current_enemy.y})!")
+                    
+        # enemy_encounter returns (new_game_state, player_health)
+        new_state, player_health = enemy_encounter(state.game_state, state.current_enemy, state.player)
+                    
+        state.game_state = new_state
+        state.player.health = player_health
+
+        if state.game_state == "playing" and state.current_enemy.health <= 0:
+            state.current_enemy.health = 0
+                    
+        state.current_enemy = None
+
+STATE_HANDLERS = {
+    'playing': handle_playing,
+    'next_level_transition': handle_next_level_transition,
+    'enemy_encounter': handle_enemy_encounter
+}
+
+def initialize_game() -> GameState:
+    """Handles initial player setup and returns the initial GameState object."""
+    name: str = input("Enter your name: ")
+    player: Player = Player(0, 0)
+    return GameState(name, player)
+
 def handle_player_move(state: GameState):
     direction = input("Move (W/A/S/D). Enter (H) to Heal: ").strip().upper()
     dr, dc = 0, 0
@@ -73,75 +142,6 @@ def print_grid_and_update(state: GameState) -> str:
 
     move_result = state.player.move(state.dungeon_map, dr, dc)
     return move_result
-
-def initialize_game() -> GameState:
-    """Handles initial player setup and returns the initial GameState object."""
-    name: str = input("Enter your name: ")
-    player: Player = Player(0, 0)
-    return GameState(name, player)
-
-def transition_to_next_level(state: GameState) -> None:
-    """Generates a new level, places the player, and updates the GameState object."""
-    dungeon_map = generate_random_walk_dungeon(GRID_SIZE, WALK_STEPS)
-    start_y, start_x = find_entrance(dungeon_map)
-    state.player.y, state.player.x = start_y, start_x
-    state.enemies, state.chests = generate_entities(dungeon_map)
-
-    state.dungeon_map = dungeon_map
-    state.level += 1
-    state.game_state = "playing"
-    clear_terminal()
-
-def update_game_state(state: GameState) -> None:
-    """Handles player movement, checks for entity interactions, and updates the GameState."""
-    
-    move_result = print_grid_and_update(state)
-    state.current_enemy = None
-
-    if move_result == "NextLevel":
-        state.game_state = "next_level_transition"
-        return
-
-    for enemy in state.enemies:
-        if enemy.health > 0 and (state.player.y, state.player.x) == (enemy.y, enemy.x):
-            state.game_state = "enemy_encounter"
-            state.current_enemy = enemy
-            return
-
-    for chest in state.chests:
-        if not chest.opened and (state.player.y, state.player.x) == (chest.y, chest.x):
-            chest.open(state.player)
-
-    if state.player.health <= 0:
-        state.game_state = "game_over"
-
-def handle_playing(state: GameState):
-    update_game_state(state)
-
-def handle_next_level_transition(state: GameState):
-    transition_to_next_level(state)
-
-def handle_enemy_encounter(state: GameState):
-    if state.current_enemy:
-        clear_terminal()
-        print(f"You encountered an enemy at ({state.current_enemy.x}, {state.current_enemy.y})!")
-                    
-        # enemy_encounter returns (new_game_state, player_health)
-        new_state, player_health = enemy_encounter(state.game_state, state.current_enemy, state.player)
-                    
-        state.game_state = new_state
-        state.player.health = player_health
-
-        if state.game_state == "playing" and state.current_enemy.health <= 0:
-            state.current_enemy.health = 0
-                    
-        state.current_enemy = None
-
-STATE_HANDLERS = {
-    'playing': handle_playing,
-    'next_level_transition': handle_next_level_transition,
-    'enemy_encounter': handle_enemy_encounter
-}
 
 def main() -> None:
     """Main game loop for continuous sessions, handling setup, transitions, and state changes."""
