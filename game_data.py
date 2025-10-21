@@ -21,7 +21,7 @@ WEAPON_DAMAGE: Dict[str, Tuple[int, int]] = {
 
 # Weapon Status Effects dictionary
 WEAPON_STATUS_EFFECTS: Dict[str, str] = {
-    "Poison Bow": "None",
+    "Poison Bow": "Poisoned",
     "Sword": "None",
     "Fists": "None"
 }
@@ -82,9 +82,12 @@ class Player:
         elif direction == 'A': dr, dc = 0, -1
         elif direction == 'D': dr, dc = 0, 1
         elif direction == 'H':
-            if self.health < self.max_health:
+            if self.health < self.max_health and self.weapon != "Fists":
                 self.health += 1
-                print("You healed 1 health point.")
+                print("You healed 1 health point, at the cost of your Weapon.")
+                self.weapon = "Fists"  # Reset weapon to fists after healing
+            elif self.weapon == "Fists":
+                print("You cannot heal without a weapon to sacrafice unarmed.")
             else:
                 print("Health is already full.")
             input("Press Enter to continue...")
