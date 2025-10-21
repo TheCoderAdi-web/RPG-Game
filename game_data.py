@@ -70,31 +70,10 @@ class Player:
         self.max_health = 5
         self.weapon = weapon
 
-    def move(self, dungeon_map: npt.NDArray[np.int_]) -> str:
+    def move(self, dungeon_map: npt.NDArray[np.int_], dr, dc) -> str:
         """Move the player based on input, checking for walls and level bounds.
         Returns a string indicating the result of the move.
         """
-        direction = input("Move (W/A/S/D). Enter (H) to Heal: ").strip().upper()
-        dr, dc = 0, 0
-
-        if direction == 'W': dr, dc = -1, 0
-        elif direction == 'S': dr, dc = 1, 0
-        elif direction == 'A': dr, dc = 0, -1
-        elif direction == 'D': dr, dc = 0, 1
-        elif direction == 'H':
-            if self.health < self.max_health and self.weapon != "Fists":
-                self.health += 1
-                print("You healed 1 health point, at the cost of your Weapon.")
-                self.weapon = "Fists"  # Reset weapon to fists after healing
-            elif self.health >= self.max_health:
-                print("Health is already full.")
-            else:
-                print("You cannot heal without a weapon to sacrafice.")
-            input("Press Enter to continue...")
-            return "Healed"
-        else:
-            print("Invalid input.")
-            return "Invalid"
 
         new_y, new_x = self.y + dr, self.x + dc
         map_height, map_width = dungeon_map.shape

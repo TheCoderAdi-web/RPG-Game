@@ -5,6 +5,32 @@ from fight import enemy_encounter
 from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState, clear_terminal
 from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities
 
+def handle_player_move(state: GameState):
+    direction = input("Move (W/A/S/D). Enter (H) to Heal: ").strip().upper()
+    dr, dc = 0, 0
+
+    if direction == 'W': dr, dc = -1, 0
+    elif direction == 'S': dr, dc = 1, 0
+    elif direction == 'A': dr, dc = 0, -1
+    elif direction == 'D': dr, dc = 0, 1
+    elif direction == 'H':
+        if state.player.health < state.player.max_health and state.player.weapon != "Fists":
+            state.player.health += 1
+            print("You healed 1 health point, at the cost of your Weapon.")
+            state.player.weapon = "Fists"  # Reset weapon to fists after healing
+        elif state.player.health >= state.player.max_health:
+            print("Health is already full.")
+        else:
+            print("You cannot heal without a weapon to sacrafice.")
+        input("Press Enter to continue...")
+
+        return "Healed"
+    else:
+        print("Invalid input.")
+        return "Invalid"
+    
+    return dc, dr
+
 def print_UI(state: GameState) -> None:
     """Print the player UI with name, weapon, and health."""
     clear_terminal()
@@ -42,7 +68,10 @@ def print_grid(state: GameState) -> None:
 def print_grid_and_update(state: GameState) -> str:
     """Print the grid, get player move, and update player position based on input."""
     print_grid(state)
-    move_result = state.player.move(state.dungeon_map)
+    
+    dr, dc = handle_player_move(state)
+
+    move_result = state.player.move(state.dungeon_map, dr, dc)
     return move_result
 
 def initialize_game() -> GameState:
@@ -74,13 +103,13 @@ def update_game_state(state: GameState) -> None:
         return
 
     for enemy in state.enemies:
-        if enemy.health > 0 and (state.player.x, state.player.y) == (enemy.x, enemy.y):
+        if enemy.health > 0 and (state.player.y, state.player.x) == (enemy.y, enemy.x):
             state.game_state = "enemy_encounter"
             state.current_enemy = enemy
             return
 
     for chest in state.chests:
-        if not chest.opened and (state.player.x, state.player.y) == (chest.x, chest.y):
+        if not chest.opened and (state.player.y, state.player.x) == (chest.y, chest.x):
             chest.open(state.player)
 
     if state.player.health <= 0:
