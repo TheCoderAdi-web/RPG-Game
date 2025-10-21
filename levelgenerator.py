@@ -1,8 +1,8 @@
-import numpy as np
+import numpy as np # type: ignore
 import random as r
 
 from typing import Dict, Tuple, List, Literal, Optional
-import numpy.typing as npt
+import numpy.typing as npt # type: ignore
 # Import necessary entities and constants from game_data
 from game_data import Enemy, Chest, level_size, GRID_SIZE, WALK_STEPS
 

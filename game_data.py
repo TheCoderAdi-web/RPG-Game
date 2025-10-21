@@ -1,6 +1,6 @@
 from typing import Dict, Tuple, List, Optional
-import numpy as np
-import numpy.typing as npt
+import numpy as np # type: ignore
+import numpy.typing as npt# type: ignore
 import os
 import platform
 

@@ -1,6 +1,6 @@
 from typing import List, Tuple, Optional
-import numpy as np
-import numpy.typing as npt
+import numpy as np # type: ignore
+import numpy.typing as npt # type: ignore
 from fight import enemy_encounter
 from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState, clear_terminal
 from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities
