@@ -29,7 +29,7 @@ def handle_player_move(state: GameState):
         print("Invalid input.")
         return "Invalid"
     
-    return dc, dr
+    return dr, dc
 
 def print_UI(state: GameState) -> None:
     """Print the player UI with name, weapon, and health."""
