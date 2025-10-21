@@ -58,7 +58,6 @@ def find_entrance(grid: npt.NDArray[np.int_]) -> Tuple[int, int]:
         grid_size = grid.shape[0]
         return grid_size // 2, grid_size // 2
 
-
 def get_unique_tile(floor_tiles: npt.NDArray[np.int_], used_tiles: set) -> Optional[Tuple[int, int]]:
     """Returns the (y, x) coordinates of a unique floor tile."""
     # floor_tiles are (row, col) which is (y, x)
