@@ -86,6 +86,33 @@ def update_game_state(state: GameState) -> None:
     if state.player.health <= 0:
         state.game_state = "game_over"
 
+def handle_playing(state: GameState):
+    update_game_state(state)
+
+def handle_next_level_transition(state: GameState):
+    transition_to_next_level(state)
+
+def handle_enemy_encounter(state: GameState):
+    if state.current_enemy:
+        clear_terminal()
+        print(f"You encountered an enemy at ({state.current_enemy.x}, {state.current_enemy.y})!")
+                    
+        # enemy_encounter returns (new_game_state, player_health)
+        new_state, player_health = enemy_encounter(state.game_state, state.current_enemy, state.player)
+                    
+        state.game_state = new_state
+        state.player.health = player_health
+
+        if state.game_state == "playing" and state.current_enemy.health <= 0:
+            state.current_enemy.health = 0
+                    
+        state.current_enemy = None
+
+STATE_HANDLERS = {
+    'playing': handle_playing,
+    'next_level_transition': handle_next_level_transition,
+    'enemy_encounter': handle_enemy_encounter
+}
 
 def main() -> None:
     """Main game loop for continuous sessions, handling setup, transitions, and state changes."""
@@ -94,29 +121,17 @@ def main() -> None:
         state = initialize_game()
 
         while state.game_state != "game_over":
+            handler = STATE_HANDLERS.get(state.game_state)
             
-            if state.game_state == "playing":
-                update_game_state(state)
+            if handler:
+                handler(state)
+            else:
+                # Fallback for an unknown state, though unlikely
+                print(f"Error: Unknown game state: {state.game_state}")
+                input("Press Enter to continue...")
+                state.game_state = "game_over"
 
-            elif state.game_state == "next_level_transition":
-                transition_to_next_level(state)
-
-            elif state.game_state == "enemy_encounter":
-                if state.current_enemy:
-                    clear_terminal()
-                    print(f"You encountered an enemy at ({state.current_enemy.x}, {state.current_enemy.y})!")
-                    
-                    # enemy_encounter returns (new_game_state, player_health)
-                    new_state, player_health = enemy_encounter(state.game_state, state.current_enemy, state.player)
-                    
-                    state.game_state = new_state
-                    state.player.health = player_health
-
-                    if state.game_state == "playing" and state.current_enemy.health <= 0:
-                        state.current_enemy.health = 0
-                    
-                    state.current_enemy = None
-
+        # Case for Game Over state
         clear_terminal()
         print("Game Over!")
         restart = input("Do you want to play again? (Y/N): ").strip().upper()

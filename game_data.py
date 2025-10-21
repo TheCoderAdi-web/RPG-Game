@@ -53,7 +53,7 @@ def clear_terminal() -> None:
 class Enemy:
     """Class representing an enemy in the game."""
 
-    def __init__(self, x: int, y: int, health: int = 3):
+    def __init__(self, y: int, x: int, health: int = 3):
         self.y = y
         self.x = x
         self.health = health
