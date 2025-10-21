@@ -32,7 +32,7 @@ def print_grid(state: GameState) -> None:
             grid_symbols[enemy.y][enemy.x] = 'E'
     for chest in state.chests:
         if not chest.opened:
-            grid_symbols[chest.y][chest.x] = MAP_SYMBOLS[2]
+            grid_symbols[chest.y][chest.x] = MAP_SYMBOLS[3]
 
     grid_symbols[state.player.y][state.player.x] = 'P'
 
@@ -57,7 +57,7 @@ def transition_to_next_level(state: GameState) -> None:
     start_y, start_x = find_entrance(dungeon_map)
     state.player.y, state.player.x = start_y, start_x
     state.enemies, state.chests = generate_entities(dungeon_map)
-    
+
     state.dungeon_map = dungeon_map
     state.level += 1
     state.game_state = "playing"
