@@ -1,6 +1,6 @@
 from typing import Dict, Tuple, List, Optional
 import numpy as np # type: ignore
-import numpy.typing as npt# type: ignore
+import numpy.typing as npt # type: ignore
 import os
 import platform
 
@@ -26,27 +26,33 @@ WEAPON_STATUS_EFFECTS: Dict[str, str] = {
     "Fists": "None"
 }
 
-# Outcomes for Player Defend vs Enemy Attack
-PLAYER_DEFENCE_OUTCOMES: Dict[int, str] = {
-    0: "Enemy attacks! You defended and take no damage!",
-    1: "Enemy attacks! You failed to defend. You take 1 damage!",
-    2: "Enemy Heals while you defended! No damage taken."
+# Using Outcome Codes instead of Display Text
+class OutcomeCodes:
+    PLAYER_DEFEND_FAIL = "P_DEFEND_FAIL"
+    PLAYER_DEFEND_SUCCESS = "P_DEFEND_SUCCESS"
+    ENEMY_BLOCK_BROKEN = "E_BLOCK_BROKEN"
+    ENEMY_PARRY = "E_PARRY"
+    STALEMATE = "STALEMATE"
+
+# Combat Outcome Display Text
+PLAYER_DEFENCE_OUTCOMES_MAP: Dict[int, Tuple[str, str]] = {
+    0: (OutcomeCodes.PLAYER_DEFEND_SUCCESS, "Enemy attacks! You defended and take no damage!"),
+    1: (OutcomeCodes.PLAYER_DEFEND_FAIL, "Enemy attacks! You failed to defend. You take 1 damage!"),
+    2: (OutcomeCodes.PLAYER_DEFEND_SUCCESS, "Enemy Heals while you defended! No damage taken.")
 }
 
-ENEMY_DEFENCE_OUTCOMES: Dict[int, str] = {
-    0: "Enemy defends and blocks your attack!",
-    1: "Enemy's block is broken! You deal damage!",
-    2: "Enemy parries your attack and counters! You take 1 damage!"
+ENEMY_DEFENCE_OUTCOMES_MAP: Dict[int, Tuple[str, str]] = {
+    0: (OutcomeCodes.STALEMATE, "Enemy defends and blocks your attack!"),
+    1: (OutcomeCodes.ENEMY_BLOCK_BROKEN, "Enemy's block is broken! You deal damage!"),
+    2: (OutcomeCodes.ENEMY_PARRY, "Enemy parries your attack and counters! You take 1 damage!")
 }
 
 # Function to clear the terminal
 def clear_terminal() -> None:
     """Clears the console screen using OS-specific commands."""
-    # Check the operating system
     if platform.system() == "Windows":
-        os.system('cls')  # Command for Windows
+        os.system('cls')
     else:
-        # Command for Linux and macOS (POSIX systems)
         os.system('clear')
 
 # Classes for Entities
@@ -70,10 +76,18 @@ class Player:
         self.max_health = 5
         self.weapon = weapon
 
-    def move(self, dungeon_map: npt.NDArray[np.int_], dr, dc) -> str:
-        """Move the player based on input, checking for walls and level bounds.
+    def move(self, direction: str, dungeon_map: npt.NDArray[np.int_]) -> str:
+        """Moves the player based on the given direction, checking for walls and level bounds.
         Returns a string indicating the result of the move.
         """
+        dr, dc = 0, 0
+
+        if direction == 'W': dr, dc = -1, 0
+        elif direction == 'S': dr, dc = 1, 0
+        elif direction == 'A': dr, dc = 0, -1
+        elif direction == 'D': dr, dc = 0, 1
+        else:
+            return "Invalid"
 
         new_y, new_x = self.y + dr, self.x + dc
         map_height, map_width = dungeon_map.shape
@@ -117,5 +131,5 @@ class GameState:
         self.chests: List[Chest] = []
         self.dungeon_map: npt.NDArray[np.int_] = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
         self.level: int = 0
-        self.game_state: str = "next_level_transition" # Start by generating the first level
+        self.game_state: str = "next_level_transition"
         self.current_enemy: Optional[Enemy] = None
