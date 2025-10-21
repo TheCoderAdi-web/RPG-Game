@@ -49,24 +49,27 @@ def generate_random_walk_dungeon(grid_size: int, steps: int) -> npt.NDArray[np.i
     return grid
 
 def find_entrance(grid: npt.NDArray[np.int_]) -> Tuple[int, int]:
-    """Returns the (x, y) coordinates of the Entrance (4)"""
+    """Returns the (y, x) coordinates of the Entrance (4)"""
     entrance_coords = np.where(grid == 4)
 
     if len(entrance_coords[0]) > 0:
-        # Note: numpy uses (row, column), which corresponds to (y, x) in the game
+        # NumPy returns (row, column) which is (y, x)
         start_y = int(entrance_coords[0][0])
         start_x = int(entrance_coords[1][0])
-        return start_x, start_y
+        # CHANGED: Return (y, x) instead of (x, y)
+        return start_y, start_x
     else:
-        # Fallback to center if entrance is somehow missing
         grid_size = grid.shape[0]
         return grid_size // 2, grid_size // 2
 
+
 def get_unique_tile(floor_tiles: npt.NDArray[np.int_], used_tiles: set) -> Optional[Tuple[int, int]]:
-    for row, col in floor_tiles:  # row corresponds to y, col corresponds to x
-        if (col, row) not in used_tiles:  # check using (x, y) format
-            used_tiles.add((col, row))  # add using (x, y) format
-            return (col, row)  # return as (x, y)
+    """Returns the (y, x) coordinates of a unique floor tile."""
+    # floor_tiles are (row, col) which is (y, x)
+    for y, x in floor_tiles: 
+        if (y, x) not in used_tiles: # Check using (y, x) format
+            used_tiles.add((y, x)) # Add using (y, x) format
+            return (y, x) # Return as (y, x)
     return None
 
 def generate_entities(dungeon_map: npt.NDArray[np.int_]) -> Tuple[List[Enemy], List[Chest]]:
@@ -88,16 +91,16 @@ def generate_entities(dungeon_map: npt.NDArray[np.int_]) -> Tuple[List[Enemy], L
     for _ in range(num_enemies):
         result = get_unique_tile(floor_tiles, used_tiles)
         if result is not None:
-            x, y = result
-            enemies.append(Enemy(x, y))
+            y, x = result
+            enemies.append(Enemy(y, x))
 
     # Place chests
     possible_items = ["Poison Bow", "Sword"]
     for _ in range(num_chests):
         result = get_unique_tile(floor_tiles, used_tiles)
         if result is not None:
-            x, y = result
+            y, x = result
             item = r.choice(possible_items)
-            chests.append(Chest(x, y, item))
+            chests.append(Chest(y, x, item))
 
     return enemies, chests

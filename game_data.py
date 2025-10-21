@@ -54,8 +54,8 @@ class Enemy:
     """Class representing an enemy in the game."""
 
     def __init__(self, x: int, y: int, health: int = 3):
-        self.x = x
         self.y = y
+        self.x = x
         self.health = health
         self.status = "None"
         self.status_duration = 0
@@ -63,9 +63,9 @@ class Enemy:
 class Player:
     """Class representing the player in the game."""
 
-    def __init__(self, x: int, y: int, health: int = 5, weapon: str = "Fists"):
-        self.x = x
+    def __init__(self, y: int, x: int, health: int = 5, weapon: str = "Fists"):
         self.y = y
+        self.x = x
         self.health = health
         self.max_health = 5
         self.weapon = weapon
@@ -86,10 +86,10 @@ class Player:
                 self.health += 1
                 print("You healed 1 health point, at the cost of your Weapon.")
                 self.weapon = "Fists"  # Reset weapon to fists after healing
-            elif self.weapon == "Fists":
-                print("You cannot heal without a weapon to sacrafice unarmed.")
-            else:
+            elif self.health >= self.max_health:
                 print("Health is already full.")
+            else:
+                print("You cannot heal without a weapon to sacrafice.")
             input("Press Enter to continue...")
             return "Healed"
         else:
@@ -111,9 +111,9 @@ class Player:
 class Chest:
     """Class representing a chest in the game."""
 
-    def __init__(self, x: int, y: int, item: str):
-        self.x = x
+    def __init__(self, y: int, x: int, item: str):
         self.y = y
+        self.x = x
         self.item = item
         self.opened = False
 

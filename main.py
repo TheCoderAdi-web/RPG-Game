@@ -54,9 +54,10 @@ def initialize_game() -> GameState:
 def transition_to_next_level(state: GameState) -> None:
     """Generates a new level, places the player, and updates the GameState object."""
     dungeon_map = generate_random_walk_dungeon(GRID_SIZE, WALK_STEPS)
-    start_x, start_y = find_entrance(dungeon_map)
-    state.player.x, state.player.y = start_x, start_y
+    start_y, start_x = find_entrance(dungeon_map)
+    state.player.y, state.player.x = start_y, start_x
     state.enemies, state.chests = generate_entities(dungeon_map)
+    
     state.dungeon_map = dungeon_map
     state.level += 1
     state.game_state = "playing"
