@@ -1,5 +1,5 @@
 # Import necessary modules and classes
-from typing import Tuple
+from typing import Tuple, Optional
 from random import randint
 from game_data import Enemy, Player, WEAPON_DAMAGE, WEAPON_STATUS_EFFECTS, PLAYER_DEFENCE_OUTCOMES, ENEMY_DEFENCE_OUTCOMES, clear_terminal
 
@@ -24,52 +24,47 @@ def enemy_turn(player_action: str) -> tuple[str, str]:
     else:
         return enemy_action, "does nothing." # Impossible, but needed for type checking
 
-def handle_turn_outcomes(enemy_action: str, action: str, health: int, enemy_health: int, damage: int, result: str) -> Tuple[int, int]:
-    """Handles the turn outcomes and returns the updated healths."""
+def handle_turn_outcomes(enemy_action: str, action: str, player: Player, enemy: Enemy, damage: int, result: str) -> None:
+    """Handles the turn outcomes by modifying Player and Enemy objects directly."""
     
     # If Enemy Heals
     if enemy_action == 'H':
         if action == 'D':
-            enemy_health += 1
+            enemy.health += 1
         elif action == 'A':
             # Enemy's heal is interrupted by attack, damage is applied in fight()
-            enemy_health -= damage
+            enemy.health -= damage
 
     # If Enemy Attacks and Player Defends or Attacks
     elif enemy_action == 'A':
         if action == 'D':
             if "failed to defend" in result:
-                    health -= 1
+                    player.health -= 1
             else:
                 pass  # No damage taken when successfully defending
         elif action == 'A':
-            health -= 1
-            enemy_health -= damage
+            player.health -= 1
+            enemy.health -= damage
         else:
-            health -= 1
+            player.health -= 1
         
     # If Enemy Defends, and Player Attacks
     elif enemy_action == 'D':
         if action == 'A':
             if "block is broken" in result:
-                enemy_health -= damage
+                enemy.health -= damage
             elif "parries your attack" in result:
-                health -= 1
+                player.health -= 1
 
-    return enemy_health, health
-
-
-def fight(health: int, enemy_health: int, enemy_status: str, enemy_status_duration: int, weapon: str) -> Tuple[int, str, bool]:
-    """Actual fight sequence. Returns updated health and whether enemy is defeated."""
+def fight(player: Player, enemy: Enemy) -> bool:
+    """Actual fight sequence. Returns whether enemy is defeated."""
 
     damage: int = 0
-    status_effect: str = enemy_status
-    status_effect_duration: int = enemy_status_duration
     is_critical_hit: bool = False # New flag to track critical hit
 
-    while health > 0 and enemy_health > 0:
+    while player.health > 0 and enemy.health > 0:
         clear_terminal()
-        print(f"\nYour Health: {health} | Enemy Health: {enemy_health}")
+        print(f"\nYour Health: {player.health} | Enemy Health: {enemy.health}")
 
         # Player's Turn
         action: str = input("Do you want to (A)ttack or (D)efend? ").strip().upper()
@@ -83,8 +78,7 @@ def fight(health: int, enemy_health: int, enemy_status: str, enemy_status_durati
         if action == 'A':
             base_damage: int
             crit_damage: int
-            base_damage, crit_damage = WEAPON_DAMAGE.get(weapon, (1, 1))
-            status_effect = WEAPON_STATUS_EFFECTS.get(weapon, "None")
+            base_damage, crit_damage = WEAPON_DAMAGE.get(player.weapon, (1, 1))
             
             # 10% chance for critical hit (randint(0, 9) == 0 gives 1/10)
             if randint(0, 9) == 0: 
@@ -93,10 +87,11 @@ def fight(health: int, enemy_health: int, enemy_status: str, enemy_status_durati
             else:
                 damage = base_damage
 
-            # Apply Poison status effect to the "Poison Bow"
-            if weapon == "Poison Bow" and randint(0, 9) < 2:  # 20% chance to apply poison
-                status_effect = "Poisoned"
-                status_effect_duration = 2  # Poison lasts for 3 turns
+            # Apply Status Effects
+            weapon_status: str = WEAPON_STATUS_EFFECTS.get(player.weapon, "None")
+            if weapon_status != "None" and randint(0, 9) < 2: # 2 / 10 OR 20% chance for effect. Also eleminates weapons with "None" status effect
+                enemy.status = weapon_status
+                enemy.status_duration = 2
 
         # If Player Defends
         elif action == 'D':
@@ -109,7 +104,7 @@ def fight(health: int, enemy_health: int, enemy_status: str, enemy_status_durati
 
         # Enemy's turn
         enemy_action: str
-        restult: str
+        result: str
         enemy_action, result = enemy_turn(action)
         print(result) # Print enemy's main turn message
 
@@ -120,31 +115,31 @@ def fight(health: int, enemy_health: int, enemy_status: str, enemy_status_durati
         # Enemy Heal Disrupted Message
         if action == 'A' and enemy_action == 'H':
             # The enemy is healing, but the player attacked, interrupting the heal.
-            print("The Enemy's Heal was Disrupted by your Attack. They lose 1 HP!")
+            print("The Enemy's Heal was Disrupted by your Attack!")
 
         # Apply Poison Effect if applicable
-        if status_effect == "Poisoned" and status_effect_duration > 0:
-            enemy_health -= 1
-            status_effect_duration -= 1
+        if enemy.status == "Poisoned" and enemy.status_duration > 0:
+            enemy.health -= 1
+            enemy.status_duration -= 1
             print("The enemy takes 1 poison damage!")
         
         input("Press Enter to continue...")
 
         # Turn Outcomes
-        enemy_health, health = handle_turn_outcomes(enemy_action, action, health, enemy_health, damage, result)
+        handle_turn_outcomes(enemy_action, action, player, enemy, damage, result)
 
         # The enemy has been defeated
-        if enemy_health <= 0:
+        if enemy.health <= 0:
             print("Enemy defeated!")
-            return health, "None", True
+            return True
         # The player has been defeated
-        if health <= 0:
+        if player.health <= 0:
             print("You were defeated!")
-            return 0, "None", False
+            return False
 
-    return health, status_effect, enemy_health <= 0
+    return enemy.health <= 0
 
-def enemy_encounter(game_state: str, enemy: Enemy, player: Player) -> tuple[str, int]:
+def enemy_encounter(game_state: str, enemy: Enemy, player: Player) -> Tuple[str, int]:
     """Handle the enemy encounter state. Returns updated game state and health."""
 
     # Initialize encounter
@@ -159,7 +154,7 @@ def enemy_encounter(game_state: str, enemy: Enemy, player: Player) -> tuple[str,
         # Player chooses to fight
         if action == 'F':
             print("You chose to fight!")
-            player.health, enemy.status, enemy_defeated = fight(player.health, enemy.health, enemy.status, enemy.status_duration, player.weapon)
+            enemy_defeated = fight(player, enemy)
 
             # Update Enemy Health based on Fight Outcome
             enemy.health = 0 if enemy_defeated else enemy.health
