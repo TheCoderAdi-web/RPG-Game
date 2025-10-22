@@ -73,6 +73,7 @@ def generate_entities(dungeon_map: npt.NDArray[np.int_]) -> Tuple[List[Enemy], L
     # Simple logic: up to 2 enemies and 1 chests
     num_enemies = min(r.randint(1, 3), len(floor_tiles_list) // 3)
     num_chests = min(1, len(floor_tiles_list) // 4)
+    num_stairs = 1
 
     # Place enemies using .pop()
     for _ in range(num_enemies):
@@ -87,5 +88,10 @@ def generate_entities(dungeon_map: npt.NDArray[np.int_]) -> Tuple[List[Enemy], L
         item = r.choice(possible_items)
         chests.append(Chest(y, x, item))
         dungeon_map[y, x] = 3 # Mark chest location on the map
+
+    for _ in range(num_stairs):
+        if not floor_tiles_list: break # Failsafe if no floor tiles are left
+        y, x = floor_tiles_list.pop()
+        dungeon_map[y, x] = 4
 
     return enemies, chests

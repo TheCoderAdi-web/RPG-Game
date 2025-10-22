@@ -10,7 +10,7 @@ WALK_STEPS: int = 450
 level_size: int = GRID_SIZE
 
 # Symbols for map rendering (0:Wall, 1:Floor, 2:Entrance, 3:Chest)
-MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: ' ', 3: 'C'}
+MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: ' ', 3: 'C', 4: '>'}
 
 # Weapon damage dictionary (Base, Crit)
 WEAPON_DAMAGE: Dict[str, Tuple[int, int]] = {
@@ -98,8 +98,6 @@ class Player:
                 return "Moved"
             else:
                 return "Wall"
-        else:
-            return "NextLevel"
 
 class Chest:
     """Class representing a chest in the game."""

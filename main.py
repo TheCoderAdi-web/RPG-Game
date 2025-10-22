@@ -91,12 +91,7 @@ def update_game_state(state: GameState, action: str) -> None:
     if action in ('W', 'A', 'S', 'D'):
         move_result = state.player.move(action, state.dungeon_map)
 
-        if move_result == "Wall":
-            print("Can't move there, it's a wall!")
-            input("Press Enter to continue...")
-            return
-
-        elif move_result == "NextLevel":
+        if move_result == "NextLevel":
             state.game_state = "next_level_transition"
             return
             
@@ -131,6 +126,11 @@ def update_game_state(state: GameState, action: str) -> None:
         if not chest.opened and (state.player.y, state.player.x) == (chest.y, chest.x):
             chest.open(state.player)
             return
+        
+    player_pos_tile = state.dungeon_map[state.player.y, state.player.x]
+    if player_pos_tile == 4: # 4 is our stairs tile
+        state.game_state = "next_level_transition"
+        return
 
 def handle_playing(state: GameState):
     """Handles the main 'playing' input loop."""
