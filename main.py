@@ -183,6 +183,13 @@ def handle_enemy_encounter(state: GameState):
     else:
         state.game_state = "playing"
 
+def print_instructions():
+    print("How To Play:")
+    print("P = Player, E = Enemy, C = Chest, > = Stairs")
+    print("To move, press the keys W/A/S/D to go in Up, Left, Down, and Right Directions Respectively.")
+    print("On each level, you must defeat all enemies to progress to the next level by moving into the Stairs tile.")
+    input("To Continue, Press Enter")
+
 # --- STATE MACHINE DICTIONARY ---
 # Maps game state names (strings) to their handler functions
 STATE_HANDLERS: Dict[str, Callable[[GameState], None]] = {
@@ -194,6 +201,8 @@ STATE_HANDLERS: Dict[str, Callable[[GameState], None]] = {
 def main() -> None:
     """Main game loop for continuous sessions, handling setup, transitions, and state changes."""
 
+    print_instructions()
+    
     while True:
         state = initialize_game()
 
