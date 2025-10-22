@@ -128,8 +128,27 @@ def update_game_state(state: GameState, action: str) -> None:
             return
         
     player_pos_tile = state.dungeon_map[state.player.y, state.player.x]
-    if player_pos_tile == 4: # 4 is our stairs tile
-        state.game_state = "next_level_transition"
+    if player_pos_tile == 4:  # 4 is our stairs tile
+        
+        # Check if any enemies are still alive
+        any_enemies_alive = any(enemy.health > 0 for enemy in state.enemies)
+
+        if any_enemies_alive:
+            # Enemies are alive: print a message and "bump" the player back
+            print("The stairs are blocked by an unseen force...")
+            print("You must defeat all enemies on this level to proceed!")
+            
+            # Revert player's position to their last tile
+            state.player.y = state.player.last_y
+            state.player.x = state.player.last_x
+            
+            input("Press Enter to continue...")
+        else:
+            # All enemies are dead: proceed to the next level
+            print("All enemies are defeated! You descend the stairs...")
+            input("Press Enter to continue...")
+            state.game_state = "next_level_transition"
+
         return
 
 def handle_playing(state: GameState):

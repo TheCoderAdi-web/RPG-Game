@@ -75,11 +75,16 @@ class Player:
         self.health = health
         self.max_health = 5
         self.weapon = weapon
+        self.last_y = y
+        self.last_x = x
 
     def move(self, direction: str, dungeon_map: npt.NDArray[np.int_]) -> str:
         """Moves the player based on the given direction, checking for walls and level bounds.
         Returns a string indicating the result of the move.
         """
+        self.last_y = self.y
+        self.last_x = self.x
+        
         dr, dc = 0, 0
 
         if direction == 'W': dr, dc = -1, 0
@@ -98,6 +103,8 @@ class Player:
                 return "Moved"
             else:
                 return "Wall"
+        else:
+            return "Wall"
 
 class Chest:
     """Class representing a chest in the game."""
