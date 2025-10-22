@@ -152,7 +152,7 @@ def update_game_state(state: GameState, action: str) -> None:
         return
 
 def handle_playing(state: GameState):
-    """Handles the main 'playing' input loop."""
+    """Handles the main 'playing' Game State loop."""
     print_grid(state)
     action: str = input("Command: ").strip().upper()
     
@@ -163,9 +163,11 @@ def handle_playing(state: GameState):
     update_game_state(state, action)
 
 def handle_next_level_transition(state: GameState):
+    """Handle the Next Level Transition Game State"""
     transition_to_next_level(state)
 
 def handle_enemy_encounter(state: GameState):
+    """Handle the Enemy Encounter Game State"""
     if state.current_enemy:
         clear_terminal()
         print(f"You encountered an enemy at ({state.current_enemy.y}, {state.current_enemy.x})!")
@@ -184,6 +186,7 @@ def handle_enemy_encounter(state: GameState):
         state.game_state = "playing"
 
 def print_instructions():
+    """Instructions on How to Play the Game, Before Starting"""
     print("How To Play:")
     print("P = Player, E = Enemy, C = Chest, > = Stairs")
     print("To move, press the keys W/A/S/D to go in Up, Left, Down, and Right Directions Respectively.")
