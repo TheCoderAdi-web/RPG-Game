@@ -4,7 +4,7 @@ import numpy.typing as npt # type: ignore
 from fight import enemy_encounter
 from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState, clear_terminal 
 from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities
-from progress_saver import save_game_prompt, load_game_prompt # NEW IMPORT
+from save_game import save_game_prompt, load_game_prompt # NEW IMPORT
 
 # --- Game Logic Functions ---
 
@@ -49,8 +49,8 @@ def print_grid(state: GameState) -> None:
     for row in grid_symbols:
         print(' '.join(row))
 
-    # UPDATED: Added 'S' (Save) to the command list
-    print("\nCommand: (W/A/S/D) Move, (H) Heal, (S) Save, (Q)uit") 
+    # UPDATED: Changed (S) Save to (T) Save/Store
+    print("\nCommand: (W/A/S/D) Move, (H) Heal, (T) Save, (Q)uit") 
 
 def handle_player_action(state: GameState, action: str) -> str:
     """Handles non-movement actions like Heal or Save."""
@@ -68,8 +68,8 @@ def handle_player_action(state: GameState, action: str) -> str:
             print("You cannot heal without a weapon to sacrifice.")
         return "ActionFail"
     
-    # NEW: Handle Save Action
-    elif action == 'S':
+    # NEW: Handle Save Action - now triggered by 'T'
+    elif action == 'T':
         save_game_prompt(state)
         return "ActionSuccess"
         
@@ -124,7 +124,8 @@ def update_game_state(state: GameState, action: str) -> None:
             return
             
     # 2. Handle Action (Heal or Save)
-    elif action in ('H', 'S'):
+    # UPDATED: Changed 'S' to 'T' in this check
+    elif action in ('H', 'T'):
         action_result = handle_player_action(state, action)
         if action_result in ("ActionSuccess", "ActionFail"):
              # For a Save or Heal action, we return to the playing state's main loop
