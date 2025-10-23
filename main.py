@@ -5,7 +5,7 @@ from fight import enemy_encounter
 # Ensure all necessary classes and constants are imported from game_data
 from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState, clear_terminal 
 # These functions are required by initialize_game and handle_player_action
-from save_game import save_game_prompt, load_game_prompt 
+from progress_saver import save_game_prompt, load_game_prompt 
 from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities
 
 # --- Game Logic Functions ---
