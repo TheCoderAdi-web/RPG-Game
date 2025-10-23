@@ -10,10 +10,10 @@ GRID_SIZE: int = 25
 WALK_STEPS: int = 450
 level_size: int = GRID_SIZE
 
-# Symbols for map rendering (0:Wall, 1:Floor, 2:Entrance, 3:Chest)
-MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: ' ', 3: 'C'}
+# Symbols for map rendering (0:Wall, 1:Floor, 2:Entrance, 3:Chest, 4:Exit)
+MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: ' ', 3: 'C', 4: '>'} # ADDED '4' FOR EXIT
 
-# Weapon damage dictionary (Base, Crit)
+# Weapon damage dictiona                ry (Base, Crit)
 WEAPON_DAMAGE: Dict[str, Tuple[int, int]] = {
     "Sword": (2, 4),
     "Poison Bow": (1, 2),
@@ -98,14 +98,22 @@ class Player:
         map_height, map_width = dungeon_map.shape
 
         if 0 <= new_y < map_height and 0 <= new_x < map_width:
-            if dungeon_map[new_y, new_x] != 0:
-                self.y, self.x = new_y, new_x
-                return "Moved"
-            else:
+            target_tile = dungeon_map[new_y, new_x]
+            
+            if target_tile == 0:
                 return "Wall"
+            
+            self.y, self.x = new_y, new_x
+            
+            # Check for the exit tile (value 4)
+            if target_tile == 4:
+                return "ExitTile" # Custom return for the exit tile
+            
+            return "Moved"
+
         else:
-            # If attempting to move outside the current map boundaries, assume it's the exit
-            return "NextLevel"
+            # If attempting to move outside the current map boundaries, it's a wall.
+            return "Wall"
 
 class Chest:
     """Class representing a chest in the game."""

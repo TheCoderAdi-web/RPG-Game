@@ -3,17 +3,16 @@ import random as r
 
 from typing import Dict, Tuple, List, Literal, Optional
 import numpy.typing as npt # type: ignore
+# Import necessary entities and constants from game_data
 from game_data import Enemy, Chest, level_size, GRID_SIZE, WALK_STEPS
 
 def generate_random_walk_dungeon(grid_size: int, steps: int) -> npt.NDArray[np.int_]:
     """Generates a dungeon map using a random walk algorithm.
 
-    Map key: 0=Wall (█), 1=Floor, 2=Entrance, 3=Chest
-    The map is an N x N numpy array where N=grid_size.
+    Map key: 0=Wall (█), 1=Floor, 2=Entrance, 4=Exit (>)
     """
     grid: npt.NDArray[np.int_] = np.zeros((grid_size, grid_size), dtype=int)
 
-    # (dr, dc) moves: Up, Down, Left, Right
     moves: Tuple[Tuple[int, int], ...] = ((-1, 0), (1, 0), (0, -1), (0, 1))
 
     # Start near the center
@@ -33,65 +32,74 @@ def generate_random_walk_dungeon(grid_size: int, steps: int) -> npt.NDArray[np.i
 
         new_row, new_col = row + dr, col + dc
 
-        # Keep the walker within bounds
         if 0 <= new_row < grid_size and 0 <= new_col < grid_size:
             row, col = new_row, new_col
-            grid[row, col] = 1 # Carve out a floor tile
+            grid[row, col] = 1 # Mark the current position as a floor tile
 
-    # Mark the entrance (player start) on the central tile
-    grid[grid_size // 2, grid_size // 2] = 2
+    # 1. Place the Exit tile (4) on a random floor space (1)
+    floor_tiles = np.argwhere(grid == 1)
+    if floor_tiles.size > 0:
+        # Choose a random floor tile for the exit
+        exit_index = r.randint(0, len(floor_tiles) - 1)
+        exit_y, exit_x = floor_tiles[exit_index]
+        grid[exit_y, exit_x] = 4 # 4 represents the exit tile '>'
+        
+    # 2. Set the entrance tile (2) where the walk started
+    grid[grid_size // 2, grid_size // 2] = 2 
+
     return grid
 
 def find_entrance(dungeon_map: npt.NDArray[np.int_]) -> Tuple[int, int]:
-    """Finds the entrance tile (2) and returns its (y, x) coordinates."""
-    # np.argwhere returns a list of (row, col) tuples for the value 2
+    """Finds the coordinates (y, x) of the entrance tile (2)."""
+    # np.argwhere returns a list of (row, col) tuples
     entrance_coords = np.argwhere(dungeon_map == 2)
     if entrance_coords.size > 0:
-        # Returns the first (y, x) pair found
-        return entrance_coords[0][0], entrance_coords[0][1]
-    
-    # Fallback to center if entrance tile is somehow missing
+        return tuple(entrance_coords[0]) # Returns the first (y, x) found
+    # Fallback to center if entrance not found
     grid_size = dungeon_map.shape[0]
     return grid_size // 2, grid_size // 2
 
+def get_unique_tile(floor_tiles: npt.NDArray[np.int_], used_tiles: set) -> Optional[Tuple[int, int]]:
+    """Returns the (y, x) coordinates of a unique floor tile, avoiding tiles already used for entities."""
+    # floor_tiles are (row, col) which is (y, x)
+    # We must also ensure we don't place entities on the Exit tile (4)
+    for y, x in floor_tiles: 
+        if (y, x) not in used_tiles: # Check using (y, x) format
+            used_tiles.add((y, x)) # Add using (y, x) format
+            return (y, x) # Return as (y, x)
+    return None
+
 def generate_entities(dungeon_map: npt.NDArray[np.int_]) -> Tuple[List[Enemy], List[Chest]]:
-    """Places enemies and chests randomly on floor tiles (1) in the dungeon map.
-       Uses the efficient .pop() method on a shuffled list of floor tiles."""
-       
-    # Find all floor tiles (value 1). This returns a NumPy array of (y, x) coordinates.
-    floor_tiles_array = np.argwhere(dungeon_map == 1)
+    """Places enemies and chests randomly on valid floor tiles (1) in the dungeon map, avoiding Exits (4)."""
     
-    # Convert to a standard Python list of tuples and shuffle it for random placement
-    floor_tiles_list = [tuple(tile) for tile in floor_tiles_array]
-    r.shuffle(floor_tiles_list)
+    # Only consider floor tiles (1) for entity placement
+    # We explicitly exclude tile 4 (Exit) since generate_random_walk_dungeon sets it
+    valid_tiles = np.argwhere(dungeon_map == 1) 
+    r.shuffle(valid_tiles)
 
     enemies: List[Enemy] = []
     chests: List[Chest] = []
 
-    possible_items = ["Sword", "Poison Bow"]
+    # Simple logic: up to 3 enemies and 1 chest (based on available tiles)
+    num_enemies = min(r.randint(1, 3), len(valid_tiles) // 3)
+    num_chests = min(1, len(valid_tiles) // 4)
 
-    # Simple logic: up to 2 enemies and 1 chests
-    num_enemies = min(r.randint(1, 3), len(floor_tiles_list) // 3)
-    num_chests = min(1, len(floor_tiles_list) // 4)
-    num_stairs = 1
+    # Place entities on unique floor tiles
+    used_tiles = set()
 
-    # Place enemies using .pop()
+    # Place enemies
     for _ in range(num_enemies):
-        if not floor_tiles_list: break
-        y, x = floor_tiles_list.pop() # Gets a unique (y, x) tile and removes it
-        enemies.append(Enemy(y, x, 3))
+        result = get_unique_tile(valid_tiles, used_tiles)
+        if result is not None:
+            y, x = result
+            # Enemy health scales slightly with level, assuming level is > 0
+            enemies.append(Enemy(y, x, health=r.randint(2, 3)))
 
-    # Place chests using .pop()
+    # Place chests
     for _ in range(num_chests):
-        if not floor_tiles_list: break
-        y, x = floor_tiles_list.pop() # Gets a unique (y, x) tile and removes it
-        item = r.choice(possible_items)
-        chests.append(Chest(y, x, item))
-        dungeon_map[y, x] = 3 # Mark chest location on the map
-
-    for _ in range(num_stairs):
-        if not floor_tiles_list: break # Failsafe if no floor tiles are left
-        y, x = floor_tiles_list.pop()
-        dungeon_map[y, x] = 4
-
+        result = get_unique_tile(valid_tiles, used_tiles)
+        if result is not None:
+            y, x = result
+            chests.append(Chest(y, x, item=r.choice(["Sword", "Poison Bow"])))
+            
     return enemies, chests

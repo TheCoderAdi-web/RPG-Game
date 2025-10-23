@@ -2,21 +2,35 @@ from typing import List, Tuple, Optional, Callable, Dict
 import numpy as np # type: ignore
 import numpy.typing as npt # type: ignore
 from fight import enemy_encounter
+# Ensure all necessary classes and constants are imported from game_data
 from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState, clear_terminal 
+# These functions are required by initialize_game and handle_player_action
+from save_game import save_game_prompt, load_game_prompt 
 from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities
-from progress_saver import save_game_prompt, load_game_prompt # NEW IMPORT
 
 # --- Game Logic Functions ---
 
 def print_UI(state: GameState) -> None:
-    """Print the player UI with name, weapon, and health."""
+    """Print the player UI with name, weapon, status, health, and enemy count."""
     clear_terminal()
     print(f"Player: {state.name}")
     print(f"Player Weapon: {state.player.weapon}")
     print(f"Level: {state.level}")
+    
+    # Display Player Status if active
+    if state.player.status != "None":
+        print(f"Status: {state.player.status} ({state.player.status_duration} turns)")
+
+    # Display health hearts
+    print("Health:", end=" ")
     for _ in range(state.player.health):
         print("♥", end=" ")
-    print("\n")
+    print(f" ({state.player.health}/{state.player.max_health})")
+
+    # Display remaining enemies count (Crucial for exit logic visibility)
+    enemies_remaining = [e for e in state.enemies if e.health > 0]
+    print(f"Enemies remaining: {len(enemies_remaining)}")
+    print("-" * 25)
 
 def print_grid(state: GameState) -> None:
     """Print the game grid with player and entities overlayed on the dungeon map."""
@@ -26,20 +40,21 @@ def print_grid(state: GameState) -> None:
     for r in range(state.dungeon_map.shape[0]):
         row_symbols: list[str] = []
         for c in range(state.dungeon_map.shape[1]):
-            # Use MAP_SYMBOLS (e.g., 'C' for chests)
-            symbol = MAP_SYMBOLS.get(int(state.dungeon_map[r, c]), '?')
+            # Use MAP_SYMBOLS (0:Wall, 1:Floor, 2:Entrance, 3:Chest, 4:Exit)
+            # Entrance (2) is rendered as floor ' ' and Exit (4) as '>'
+            symbol = MAP_SYMBOLS.get(int(state.dungeon_map[r, c]), '?') 
             row_symbols.append(symbol)
         grid_symbols.append(row_symbols)
 
+    # Place Enemy symbols (E)
     for enemy in state.enemies:
         if enemy.health > 0:
             grid_symbols[enemy.y][enemy.x] = 'E'
 
-    # Check for chests and place symbol if not opened
+    # Check for chests and place symbol (C) if not opened and no enemy is on the tile
     for chest in state.chests:
         if not chest.opened:
-            # We use the map value of 3 for chests, but override it here if the player isn't standing on it
-            if grid_symbols[chest.y][chest.x] != 'E':
+            if grid_symbols[chest.y][chest.x] not in ['E', 'P']:
                  grid_symbols[chest.y][chest.x] = 'C'
 
     # Place player symbol last to ensure visibility
@@ -49,7 +64,6 @@ def print_grid(state: GameState) -> None:
     for row in grid_symbols:
         print(' '.join(row))
 
-    # UPDATED: Changed (S) Save to (T) Save/Store
     print("\nCommand: (W/A/S/D) Move, (H) Heal, (T) Save, (Q)uit") 
 
 def handle_player_action(state: GameState, action: str) -> str:
@@ -57,7 +71,9 @@ def handle_player_action(state: GameState, action: str) -> str:
     
     if action == 'H':
         player = state.player
-        if player.health < player.max_health and player.weapon != "Fists":
+        if player.status != "None":
+            print(f"You cannot focus to heal while {player.status}!")
+        elif player.health < player.max_health and player.weapon != "Fists":
             player.health += 1
             print("You healed 1 health point, at the cost of your Weapon.")
             player.weapon = "Fists"
@@ -66,28 +82,29 @@ def handle_player_action(state: GameState, action: str) -> str:
             print("Health is already full.")
         else:
             print("You cannot heal without a weapon to sacrifice.")
-        return "ActionFail"
+        
+        # All healing attempts result in a turn, even if failed
+        return "ActionSuccess" 
     
-    # NEW: Handle Save Action - now triggered by 'T'
+    # Handle Save Action - triggered by 'T'
     elif action == 'T':
-        save_game_prompt(state)
+        # Relies on the external save_game_prompt function
+        save_game_prompt(state) 
         return "ActionSuccess"
         
     return "Invalid"
 
 def initialize_game(load: bool = True) -> GameState:
-    """
-    Handles initial player setup or loads a saved game.
-    If 'load' is True, it prompts the user to load a game first.
-    """
+    """Handles initial player setup or loads a saved game."""
     
     if load:
-        loaded_state = load_game_prompt()
+        # Relies on the external load_game_prompt function
+        loaded_state = load_game_prompt() 
         if loaded_state:
             return loaded_state
             
     name: str = input("Enter your name: ")
-    player: Player = Player(0, 0)
+    player: Player = Player(0, 0) 
     
     state = GameState(name, player)
     return state
@@ -107,42 +124,74 @@ def transition_to_next_level(state: GameState) -> None:
     print(f"*** Level {state.level} Reached! ***")
     input("Press Enter to continue...")
 
+def apply_status_effects(state: GameState) -> None:
+    """Applies and decays status effects at the start of the player's turn."""
+    player = state.player
+    if player.status == "Poisoned":
+        player.health -= 1
+        player.status_duration -= 1
+        print_UI(state) # Re-print UI to show damage
+        print(f"The poison bites at you, dealing 1 damage! {player.health} health remaining.")
+        if player.status_duration <= 0:
+            player.status = "None"
+            player.status_duration = 0
+            print("The poison wears off.")
+        input("Press Enter to continue...")
+    
+    # Check for death after status damage
+    if player.health <= 0:
+        state.game_state = "game_over"
+
 def update_game_state(state: GameState, action: str) -> None:
     """Handles movement or action, and checks for entity interactions."""
     
     # 1. Handle Movement
     if action in ('W', 'A', 'S', 'D'):
-        move_result = state.player.move(action, state.dungeon_map)
+        # move() method in Player determines if player hits a Wall, Moves, or hits ExitTile
+        move_result = state.player.move(action, state.dungeon_map) 
 
         if move_result == "Wall":
             print("Can't move there, it's a wall!")
             input("Press Enter to continue...")
             return
 
-        elif move_result == "NextLevel":
-            state.game_state = "next_level_transition"
-            return
+        # VITAL LOGIC: Check for the Exit Tile and enemy clearance
+        elif move_result == "ExitTile":
+            # Check if all enemies are defeated (health > 0)
+            enemies_remaining = [e for e in state.enemies if e.health > 0]
             
+            if not enemies_remaining:
+                # All enemies cleared, transition immediately
+                print("You found the exit! All enemies defeated. Moving to the next level...")
+                state.game_state = "next_level_transition"
+                return
+            else:
+                # Player is on the exit tile, but transition is blocked
+                print(f"The exit is here (>) but you must defeat {len(enemies_remaining)} enemies before proceeding!")
+                # Move back to prevent continuous attempts on the same turn
+                # The player class handles moving the player to the exit tile. 
+                # We do not revert the player position, just block the state transition.
+                input("Press Enter to continue...")
+                return 
+        
     # 2. Handle Action (Heal or Save)
-    # UPDATED: Changed 'S' to 'T' in this check
     elif action in ('H', 'T'):
-        action_result = handle_player_action(state, action)
-        if action_result in ("ActionSuccess", "ActionFail"):
-             # For a Save or Heal action, we return to the playing state's main loop
-             return
+        handle_player_action(state, action)
+        return
     
-    # 3. Handle Invalid Input
-    else:
+    # 3. Handle Quit Input
+    elif action == 'Q':
+        state.game_state = "game_over"
+        return
+    
+    # 4. Handle Invalid Input
+    elif action != "": 
         print("Invalid command.")
         input("Press Enter to continue...")
         return
     
-    # 4. Check Collisions (only after successful movement)
+    # 5. Check Collisions (only after successful movement or action)
     
-    if state.player.health <= 0:
-        state.game_state = "game_over"
-        return
-
     # Check for enemy encounter
     for enemy in state.enemies:
         if enemy.health > 0 and (state.player.y, state.player.x) == (enemy.y, enemy.x):
@@ -158,19 +207,23 @@ def update_game_state(state: GameState, action: str) -> None:
 
 def handle_playing(state: GameState):
     """Handles the main 'playing' input loop."""
+    
+    # 0. Apply status effects at the start of the turn
+    apply_status_effects(state)
+    if state.game_state == "game_over":
+        return
+        
     print_grid(state)
     action: str = input("Command: ").strip().upper()
-    
-    if action == 'Q':
-        state.game_state = "game_over"
-        return
         
     update_game_state(state, action)
 
 def handle_next_level_transition(state: GameState):
+    """Handles the level transition state."""
     transition_to_next_level(state)
 
 def handle_enemy_encounter(state: GameState):
+    """Handles the enemy encounter state."""
     if state.current_enemy:
         clear_terminal()
         print(f"You encountered an enemy at ({state.current_enemy.y}, {state.current_enemy.x})!")
@@ -209,10 +262,12 @@ def main() -> None:
             if handler:
                 handler(state)
             else:
+                # Fallback for an unknown state, though unlikely
                 print(f"Error: Unknown game state: {state.game_state}")
                 input("Press Enter to continue...")
                 state.game_state = "game_over"
 
+        # Case for Game Over state
         clear_terminal()
         print("Game Over!")
         restart = input("Do you want to play again? (Y/N): ").strip().upper()
