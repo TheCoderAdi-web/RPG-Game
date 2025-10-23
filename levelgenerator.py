@@ -79,7 +79,7 @@ def generate_entities(dungeon_map: npt.NDArray[np.int_]) -> Tuple[List[Enemy], L
     for _ in range(num_enemies):
         if not floor_tiles_list: break
         y, x = floor_tiles_list.pop() # Gets a unique (y, x) tile and removes it
-        enemies.append(Enemy(y, x))
+        enemies.append(Enemy(y, x, 3))
 
     # Place chests using .pop()
     for _ in range(num_chests):
