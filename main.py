@@ -4,6 +4,7 @@ import numpy.typing as npt # type: ignore
 from fight import enemy_encounter
 from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState, clear_terminal 
 from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities
+from save_game import save_game_prompt, load_game_prompt # NEW IMPORT
 
 # --- Game Logic Functions ---
 
@@ -34,6 +35,13 @@ def print_grid(state: GameState) -> None:
         if enemy.health > 0:
             grid_symbols[enemy.y][enemy.x] = 'E'
 
+    # Check for chests and place symbol if not opened
+    for chest in state.chests:
+        if not chest.opened:
+            # We use the map value of 3 for chests, but override it here if the player isn't standing on it
+            if grid_symbols[chest.y][chest.x] != 'E':
+                 grid_symbols[chest.y][chest.x] = 'C'
+
     # Place player symbol last to ensure visibility
     grid_symbols[state.player.y][state.player.x] = 'P'
 
@@ -41,10 +49,11 @@ def print_grid(state: GameState) -> None:
     for row in grid_symbols:
         print(' '.join(row))
 
-    print("\nCommand: (W/A/S/D) Move, (H) Heal, (Q)uit")
+    # UPDATED: Added 'S' (Save) to the command list
+    print("\nCommand: (W/A/S/D) Move, (H) Heal, (S) Save, (Q)uit") 
 
 def handle_player_action(state: GameState, action: str) -> str:
-    """Handles non-movement actions like Heal."""
+    """Handles non-movement actions like Heal or Save."""
     
     if action == 'H':
         player = state.player
@@ -58,11 +67,25 @@ def handle_player_action(state: GameState, action: str) -> str:
         else:
             print("You cannot heal without a weapon to sacrifice.")
         return "ActionFail"
+    
+    # NEW: Handle Save Action
+    elif action == 'S':
+        save_game_prompt(state)
+        return "ActionSuccess"
         
     return "Invalid"
 
-def initialize_game() -> GameState:
-    """Handles initial player setup and returns the initial GameState object."""
+def initialize_game(load: bool = True) -> GameState:
+    """
+    Handles initial player setup or loads a saved game.
+    If 'load' is True, it prompts the user to load a game first.
+    """
+    
+    if load:
+        loaded_state = load_game_prompt()
+        if loaded_state:
+            return loaded_state
+            
     name: str = input("Enter your name: ")
     player: Player = Player(0, 0)
     
@@ -91,15 +114,20 @@ def update_game_state(state: GameState, action: str) -> None:
     if action in ('W', 'A', 'S', 'D'):
         move_result = state.player.move(action, state.dungeon_map)
 
-        if move_result == "NextLevel":
+        if move_result == "Wall":
+            print("Can't move there, it's a wall!")
+            input("Press Enter to continue...")
+            return
+
+        elif move_result == "NextLevel":
             state.game_state = "next_level_transition"
             return
             
-    # 2. Handle Action (Heal)
-    elif action in ('H'):
+    # 2. Handle Action (Heal or Save)
+    elif action in ('H', 'S'):
         action_result = handle_player_action(state, action)
         if action_result in ("ActionSuccess", "ActionFail"):
-             input("Press Enter to continue...")
+             # For a Save or Heal action, we return to the playing state's main loop
              return
     
     # 3. Handle Invalid Input
@@ -108,7 +136,7 @@ def update_game_state(state: GameState, action: str) -> None:
         input("Press Enter to continue...")
         return
     
-    # 4. Check Collisions
+    # 4. Check Collisions (only after successful movement)
     
     if state.player.health <= 0:
         state.game_state = "game_over"
@@ -126,33 +154,9 @@ def update_game_state(state: GameState, action: str) -> None:
         if not chest.opened and (state.player.y, state.player.x) == (chest.y, chest.x):
             chest.open(state.player)
             return
-        
-    player_pos_tile = state.dungeon_map[state.player.y, state.player.x]
-    if player_pos_tile == 4:  # 4 is our stairs tile
-        
-        # Check if any enemies are still alive
-        any_enemies_alive = any(enemy.health > 0 for enemy in state.enemies)
-
-        if any_enemies_alive:
-            # Enemies are alive: print a message and "bump" the player back
-            print("The stairs are blocked by an unseen force...")
-            print("You must defeat all enemies on this level to proceed!")
-            
-            # Revert player's position to their last tile
-            state.player.y = state.player.last_y
-            state.player.x = state.player.last_x
-            
-            input("Press Enter to continue...")
-        else:
-            # All enemies are dead: proceed to the next level
-            print("All enemies are defeated! You descend the stairs...")
-            input("Press Enter to continue...")
-            state.game_state = "next_level_transition"
-
-        return
 
 def handle_playing(state: GameState):
-    """Handles the main 'playing' Game State loop."""
+    """Handles the main 'playing' input loop."""
     print_grid(state)
     action: str = input("Command: ").strip().upper()
     
@@ -163,11 +167,9 @@ def handle_playing(state: GameState):
     update_game_state(state, action)
 
 def handle_next_level_transition(state: GameState):
-    """Handle the Next Level Transition Game State"""
     transition_to_next_level(state)
 
 def handle_enemy_encounter(state: GameState):
-    """Handle the Enemy Encounter Game State"""
     if state.current_enemy:
         clear_terminal()
         print(f"You encountered an enemy at ({state.current_enemy.y}, {state.current_enemy.x})!")
@@ -185,14 +187,6 @@ def handle_enemy_encounter(state: GameState):
     else:
         state.game_state = "playing"
 
-def print_instructions():
-    """Instructions on How to Play the Game, Before Starting"""
-    print("How To Play:")
-    print("P = Player, E = Enemy, C = Chest, > = Stairs")
-    print("To move, press the keys W/A/S/D to go in Up, Left, Down, and Right Directions Respectively.")
-    print("On each level, you must defeat all enemies to progress to the next level by moving into the Stairs tile.")
-    input("To Continue, Press Enter")
-
 # --- STATE MACHINE DICTIONARY ---
 # Maps game state names (strings) to their handler functions
 STATE_HANDLERS: Dict[str, Callable[[GameState], None]] = {
@@ -204,10 +198,9 @@ STATE_HANDLERS: Dict[str, Callable[[GameState], None]] = {
 def main() -> None:
     """Main game loop for continuous sessions, handling setup, transitions, and state changes."""
 
-    print_instructions()
-    
     while True:
-        state = initialize_game()
+        # Load Game Prompt is run before initialization.
+        state = initialize_game(load=True)
 
         while state.game_state != "game_over":
             handler = STATE_HANDLERS.get(state.game_state)

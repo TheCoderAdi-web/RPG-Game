@@ -1,8 +1,9 @@
 from typing import Dict, Tuple, List, Optional
 import numpy as np # type: ignore
-import numpy.typing as npt # type: ignore
+import numpy.typing as npt# type: ignore
 import os
 import platform
+import pickle # New import for saving/loading
 
 # --- Global Variables for Level Generation ---
 GRID_SIZE: int = 25
@@ -10,7 +11,7 @@ WALK_STEPS: int = 450
 level_size: int = GRID_SIZE
 
 # Symbols for map rendering (0:Wall, 1:Floor, 2:Entrance, 3:Chest)
-MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: ' ', 3: 'C', 4: '>'}
+MAP_SYMBOLS: Dict[int, str] = {0: '█', 1: ' ', 2: ' ', 3: 'C'}
 
 # Weapon damage dictionary (Base, Crit)
 WEAPON_DAMAGE: Dict[str, Tuple[int, int]] = {
@@ -26,15 +27,16 @@ WEAPON_STATUS_EFFECTS: Dict[str, str] = {
     "Fists": "None"
 }
 
-# Using Outcome Codes instead of Display Text
+# Outcome Codes (Used for robust combat logic)
 class OutcomeCodes:
-    PLAYER_DEFEND_FAIL = "P_DEFEND_FAIL"
-    PLAYER_DEFEND_SUCCESS = "P_DEFEND_SUCCESS"
+    PLAYER_DEFEND_SUCCESS = "P_DEF_OK"
+    PLAYER_DEFEND_FAIL = "P_DEF_FAIL"
+    ENEMY_BLOCK_OK = "E_BLOCK_OK"
     ENEMY_BLOCK_BROKEN = "E_BLOCK_BROKEN"
     ENEMY_PARRY = "E_PARRY"
     STALEMATE = "STALEMATE"
 
-# Combat Outcome Display Text
+# Outcomes for Player Defend vs Enemy Attack
 PLAYER_DEFENCE_OUTCOMES_MAP: Dict[int, Tuple[str, str]] = {
     0: (OutcomeCodes.PLAYER_DEFEND_SUCCESS, "Enemy attacks! You defended and take no damage!"),
     1: (OutcomeCodes.PLAYER_DEFEND_FAIL, "Enemy attacks! You failed to defend. You take 1 damage!"),
@@ -42,59 +44,57 @@ PLAYER_DEFENCE_OUTCOMES_MAP: Dict[int, Tuple[str, str]] = {
 }
 
 ENEMY_DEFENCE_OUTCOMES_MAP: Dict[int, Tuple[str, str]] = {
-    0: (OutcomeCodes.STALEMATE, "Enemy defends and blocks your attack!"),
+    0: (OutcomeCodes.ENEMY_BLOCK_OK, "Enemy defends and blocks your attack!"),
     1: (OutcomeCodes.ENEMY_BLOCK_BROKEN, "Enemy's block is broken! You deal damage!"),
-    2: (OutcomeCodes.ENEMY_PARRY, "Enemy parries your attack and counters! You take 1 damage!")
+    2: (OutcomeCodes.ENEMY_PARRY, "Enemy parries! You take 1 damage.")
 }
 
-# Function to clear the terminal
+
 def clear_terminal() -> None:
-    """Clears the console screen using OS-specific commands."""
+    """Clears the terminal screen."""
     if platform.system() == "Windows":
         os.system('cls')
     else:
         os.system('clear')
 
-# Classes for Entities
-class Enemy:
-    """Class representing an enemy in the game."""
+# --- Entity Classes ---
 
-    def __init__(self, y: int, x: int, health: int = 3):
-        self.y = y
+class Enemy:
+    """Class representing an enemy."""
+    # Added __slots__ for faster object access and to help with pickling
+    __slots__ = ['x', 'y', 'health', 'max_health', 'status', 'status_duration'] 
+
+    def __init__(self, y: int, x: int, health: int):
         self.x = x
+        self.y = y
         self.health = health
+        self.max_health = health
         self.status = "None"
         self.status_duration = 0
 
 class Player:
-    """Class representing the player in the game."""
+    """Class representing the player."""
+    # Added __slots__ for faster object access and to help with pickling
+    __slots__ = ['x', 'y', 'health', 'max_health', 'weapon', 'status', 'status_duration'] 
 
-    def __init__(self, y: int, x: int, health: int = 5, weapon: str = "Fists"):
-        self.y = y
+    def __init__(self, y: int, x: int):
         self.x = x
-        self.health = health
+        self.y = y
+        self.health = 5
         self.max_health = 5
-        self.weapon = weapon
-        self.last_y = y
-        self.last_x = x
-
+        self.weapon = "Fists"
+        self.status = "None"
+        self.status_duration = 0
+    
     def move(self, direction: str, dungeon_map: npt.NDArray[np.int_]) -> str:
-        """Moves the player based on the given direction, checking for walls and level bounds.
-        Returns a string indicating the result of the move.
-        """
-        self.last_y = self.y
-        self.last_x = self.x
-        
-        dr, dc = 0, 0
+        """Move the player based on input and map boundaries."""
+        new_y, new_x = self.y, self.x
 
-        if direction == 'W': dr, dc = -1, 0
-        elif direction == 'S': dr, dc = 1, 0
-        elif direction == 'A': dr, dc = 0, -1
-        elif direction == 'D': dr, dc = 0, 1
-        else:
-            return "Invalid"
+        if direction == 'W': new_y -= 1
+        elif direction == 'S': new_y += 1
+        elif direction == 'A': new_x -= 1
+        elif direction == 'D': new_x += 1
 
-        new_y, new_x = self.y + dr, self.x + dc
         map_height, map_width = dungeon_map.shape
 
         if 0 <= new_y < map_height and 0 <= new_x < map_width:
@@ -104,10 +104,13 @@ class Player:
             else:
                 return "Wall"
         else:
-            return "Wall"
+            # If attempting to move outside the current map boundaries, assume it's the exit
+            return "NextLevel"
 
 class Chest:
     """Class representing a chest in the game."""
+    # Added __slots__ for faster object access and to help with pickling
+    __slots__ = ['x', 'y', 'item', 'opened'] 
 
     def __init__(self, y: int, x: int, item: str):
         self.y = y
@@ -136,5 +139,29 @@ class GameState:
         self.chests: List[Chest] = []
         self.dungeon_map: npt.NDArray[np.int_] = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
         self.level: int = 0
-        self.game_state: str = "next_level_transition"
-        self.current_enemy: Optional[Enemy] = None
+        self.game_state: str = "next_level_transition" # Start at transition to generate Lvl 1
+        self.current_enemy: Optional[Enemy] = None # Enemy in current fight
+
+    def save_to_file(self, filename: str = 'savegame.dat') -> None:
+        """Saves the entire GameState object using pickle."""
+        try:
+            with open(filename, 'wb') as f:
+                pickle.dump(self, f)
+            print(f"\nGame successfully saved to {filename}!")
+        except Exception as e:
+            print(f"\nERROR: Could not save game: {e}")
+
+    @staticmethod
+    def load_from_file(filename: str = 'savegame.dat') -> Optional['GameState']:
+        """Loads a GameState object from a file using pickle."""
+        try:
+            with open(filename, 'rb') as f:
+                state = pickle.load(f)
+            print(f"\nGame successfully loaded from {filename}!")
+            return state
+        except FileNotFoundError:
+            print("\nNo save file found. Starting new game.")
+            return None
+        except Exception as e:
+            print(f"\nERROR: Could not load game: {e}. Starting new game.")
+            return None
