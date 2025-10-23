@@ -4,7 +4,7 @@ import numpy.typing as npt # type: ignore
 from fight import enemy_encounter
 from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState, clear_terminal 
 from levelgenerator import generate_random_walk_dungeon, find_entrance, generate_entities
-from save_game import save_game_prompt, load_game_prompt # NEW IMPORT
+from progress_saver import save_game_prompt, load_game_prompt # NEW IMPORT
 
 # --- Game Logic Functions ---
 
