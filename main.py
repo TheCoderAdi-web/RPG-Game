@@ -151,8 +151,6 @@ def update_game_state(state: GameState, action: str) -> None:
         move_result = state.player.move(action, state.dungeon_map) 
 
         if move_result == "Wall":
-            print("Can't move there, it's a wall!")
-            input("Press Enter to continue...")
             return
 
         # VITAL LOGIC: Check for the Exit Tile and enemy clearance
@@ -181,8 +179,15 @@ def update_game_state(state: GameState, action: str) -> None:
     
     # 3. Handle Quit Input
     elif action == 'Q':
-        state.game_state = "game_over"
-        return
+        save = input("Would you like to save your game before quitting? (Y/N): ")
+        if save.strip().upper() == 'N':
+            state.game_state = "game_over"
+            return
+        elif save.strip().upper() == 'Y':
+            save_game_prompt(state)
+        else:
+            save = input("Invalid Input. Would you like to save your game before quitting? (Y/N): ")
+
     
     # 4. Handle Invalid Input
     elif action != "": 
