@@ -75,16 +75,16 @@ class Enemy:
 class Player:
     """Class representing the player."""
     # Added __slots__ for faster object access and to help with pickling
-    __slots__ = ['x', 'y', 'health', 'max_health', 'weapon', 'status', 'status_duration'] 
+    __slots__ = ['x', 'y', 'health', 'max_health', 'gear', 'status', 'status_duration'] 
 
-    def __init__(self, y: int, x: int):
-        self.x = x
-        self.y = y
-        self.health = 5
-        self.max_health = 5
-        self.weapon = "Fists"
-        self.status = "None"
-        self.status_duration = 0
+    def __init__(self, y: int, x: int) -> None:
+        self.x: int = x
+        self.y: int = y
+        self.health: int = 5
+        self.max_health: int = 5
+        self.gear: str = "Fists"
+        self.status: str = "None"
+        self.status_duration: int = 0
     
     def move(self, direction: str, dungeon_map: npt.NDArray[np.int_]) -> str:
         """Move the player based on input and map boundaries."""

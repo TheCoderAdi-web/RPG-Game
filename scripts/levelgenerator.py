@@ -100,6 +100,6 @@ def generate_entities(dungeon_map: npt.NDArray[np.int_]) -> Tuple[List[Enemy], L
         result = get_unique_tile(valid_tiles, used_tiles)
         if result is not None:
             y, x = result
-            chests.append(Chest(y, x, item=r.choice(["Sword", "Poison Bow"])))
+            chests.append(Chest(y, x, item=r.choice(["Sword", "Poison Bow", "Iron Armour"])))
             
     return enemies, chests

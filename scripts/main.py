@@ -11,10 +11,10 @@ from levelgenerator import generate_random_walk_dungeon, find_entrance, generate
 # --- Game Logic Functions ---
 
 def print_UI(state: GameState) -> None:
-    """Print the player UI with name, weapon, status, health, and enemy count."""
+    """Print the player UI with name, gear, status, health, and enemy count."""
     clear_terminal()
     print(f"Player: {state.name}")
-    print(f"Player Weapon: {state.player.weapon}")
+    print(f"Player Gear: {state.player.gear}")
     print(f"Level: {state.level}")
     
     # Display Player Status if active
@@ -73,15 +73,15 @@ def handle_player_action(state: GameState, action: str) -> str:
         player = state.player
         if player.status != "None":
             print(f"You cannot focus to heal while {player.status}!")
-        elif player.health < player.max_health and player.weapon != "Fists":
+        elif player.health < player.max_health and "Fists" not in player.gear:
             player.health += 1
-            print("You healed 1 health point, at the cost of your Weapon.")
-            player.weapon = "Fists"
+            print("You healed 1 health point, at the cost of your gear.")
+            player.gear.append("Fists, ")
             return "ActionSuccess"
         elif player.health >= player.max_health:
             print("Health is already full.")
         else:
-            print("You cannot heal without a weapon to sacrifice.")
+            print("You cannot heal without a gear to sacrifice.")
         
         # All healing attempts result in a turn, even if failed
         return "ActionSuccess" 

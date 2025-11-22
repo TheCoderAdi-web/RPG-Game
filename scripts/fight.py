@@ -60,6 +60,10 @@ def handle_turn_outcomes(enemy_action: str, action: str, player: Player, enemy: 
             if outcome_code == OutcomeCodes.PLAYER_DEFEND_FAIL:
                     player.health -= 1
             # If outcome_code is PLAYER_DEFEND_SUCCESS, no damage is taken.
+            # If player has Iron Armour equipped while defending, apply recoil damage to enemy
+            if "Iron Armour" in player.gear:
+                enemy.health -= 1
+                print("Your Iron Armour recoils! The enemy takes 1 damage!")
         elif action == 'A':
             # Both attack: standard damage is applied
             player.health -= 1
@@ -99,22 +103,25 @@ def fight(player: Player, enemy: Enemy) -> bool:
         if action == 'A':
             base_damage: int
             crit_damage: int
-            base_damage, crit_damage = WEAPON_DAMAGE.get(player.weapon, (1, 1))
+            for gear in player.gear.split(', '):
+                base_damage, crit_damage = WEAPON_DAMAGE.get(gear, (1, 1))
             
-            if randint(0, 9) == 0: 
-                damage = crit_damage
-                is_critical_hit = True
-            else:
-                damage = base_damage
+                if randint(0, 9) == 0: 
+                    damage = crit_damage
+                    is_critical_hit = True
+                else:
+                    damage = base_damage
 
-            weapon_status: str = WEAPON_STATUS_EFFECTS.get(player.weapon, "None")
-            if weapon_status != "None" and randint(0, 9) < 2:
-                enemy.status = weapon_status
-                enemy.status_duration = 2
+                gear_status: str = WEAPON_STATUS_EFFECTS.get(gear, "None")
+                if gear_status != "None" and randint(0, 9) < 2:
+                    enemy.status = gear_status
+                    enemy.status_duration = 2
 
         elif action == 'D':
-            print("You defend and brace yourself!")
-        
+            if "Iron Armour" in player.gear:
+                print("You defend and brace yourself with your Iron Armour!")
+            else:
+                print("You defend and brace yourself!")
         else:
             print("Invalid action. You lose your turn!")
             action = ''
