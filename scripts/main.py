@@ -1,7 +1,7 @@
 from typing import List, Tuple, Optional, Callable, Dict
 import numpy as np # type: ignore
 import numpy.typing as npt # type: ignore
-from scripts.fight import enemy_encounter
+from fight import enemy_encounter
 # Ensure all necessary classes and constants are imported from game_data
 from game_data import Enemy, Player, Chest, MAP_SYMBOLS, GRID_SIZE, WALK_STEPS, GameState, clear_terminal 
 # These functions are required by initialize_game and handle_player_action
