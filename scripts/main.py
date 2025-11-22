@@ -14,7 +14,10 @@ def print_UI(state: GameState) -> None:
     """Print the player UI with name, gear, status, health, and enemy count."""
     clear_terminal()
     print(f"Player: {state.name}")
-    print(f"Player Gear: {state.player.gear}")
+    # Show equipped weapon and armour separately
+    weapon_display = getattr(state.player, 'weapon', 'Fists')
+    armour_display = ", ".join(state.player.armour) if getattr(state.player, 'armour', None) else 'None'
+    print(f"Weapon: {weapon_display} | Armour: {armour_display}")
     print(f"Level: {state.level}")
     
     # Display Player Status if active
@@ -73,11 +76,60 @@ def handle_player_action(state: GameState, action: str) -> str:
         player = state.player
         if player.status != "None":
             print(f"You cannot focus to heal while {player.status}!")
-        elif player.health < player.max_health and "Fists" not in player.gear:
-            player.health += 1
-            print("You healed 1 health point, at the cost of your gear.")
-            player.gear.append("Fists, ")
-            return "ActionSuccess"
+        elif player.health < player.max_health and (getattr(player, 'weapon', 'Fists') != "Fists" or getattr(player, 'armour', None)):
+            # Heal by sacrificing equipment. Prompt the player to choose which item to sacrifice.
+            weapon = getattr(player, 'weapon', 'Fists')
+            armour_list = getattr(player, 'armour', []) or []
+
+            print("Choose equipment to sacrifice to heal 1 HP:")
+            options = []
+            idx = 1
+            if weapon != "Fists":
+                print(f"  {idx}) Weapon: {weapon}")
+                options.append(('weapon', weapon))
+                idx += 1
+
+            for a in armour_list:
+                print(f"  {idx}) Armour: {a}")
+                options.append(('armour', a))
+                idx += 1
+
+            print(f"  {idx}) Cancel")
+
+            # Prompt until valid choice
+            while True:
+                choice = input(f"Choose 1-{idx} to sacrifice (or {idx} to cancel): ").strip()
+                if not choice.isdigit():
+                    print("Please enter a number.")
+                    continue
+                choice_num = int(choice)
+                if choice_num < 1 or choice_num > idx:
+                    print("Choice out of range.")
+                    continue
+
+                if choice_num == idx:
+                    print("Heal cancelled.")
+                    return "ActionSuccess"
+
+                chosen_type, chosen_name = options[choice_num - 1]
+
+                # Apply sacrifice
+                player.health += 1
+                print("You healed 1 health point, at the cost of your equipment.")
+
+                if chosen_type == 'weapon':
+                    old_weapon = player.weapon
+                    player.weapon = "Fists"
+                    print(f"You sacrificed your {old_weapon} and are left with Fists.")
+                else:
+                    # remove the first matching armour
+                    try:
+                        player.armour.remove(chosen_name)
+                        print(f"You sacrificed your {chosen_name} armour.")
+                    except ValueError:
+                        print(f"Could not find {chosen_name} to remove.")
+
+                return "ActionSuccess"
         elif player.health >= player.max_health:
             print("Health is already full.")
         else:

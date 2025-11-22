@@ -61,7 +61,7 @@ def handle_turn_outcomes(enemy_action: str, action: str, player: Player, enemy: 
                     player.health -= 1
             # If outcome_code is PLAYER_DEFEND_SUCCESS, no damage is taken.
             # If player has Iron Armour equipped while defending, apply recoil damage to enemy
-            if "Iron Armour" in player.gear:
+            if "Iron Armour" in getattr(player, 'armour', []):
                 enemy.health -= 1
                 print("Your Iron Armour recoils! The enemy takes 1 damage!")
         elif action == 'A':
@@ -101,24 +101,25 @@ def fight(player: Player, enemy: Enemy) -> bool:
         is_critical_hit = False
         
         if action == 'A':
-            base_damage: int
-            crit_damage: int
-            for gear in player.gear.split(', '):
-                base_damage, crit_damage = WEAPON_DAMAGE.get(gear, (1, 1))
-            
-                if randint(0, 9) == 0: 
-                    damage = crit_damage
-                    is_critical_hit = True
-                else:
-                    damage = base_damage
+            # Use explicit single weapon for damage (player.weapon)
+            weapon = getattr(player, 'weapon', 'Fists')
+            base_damage, crit_damage = WEAPON_DAMAGE.get(weapon, (1, 1))
 
-                gear_status: str = WEAPON_STATUS_EFFECTS.get(gear, "None")
-                if gear_status != "None" and randint(0, 9) < 2:
-                    enemy.status = gear_status
-                    enemy.status_duration = 2
+            # Apply status from weapon if applicable
+            gear_status: str = WEAPON_STATUS_EFFECTS.get(weapon, "None")
+            if gear_status != "None" and randint(0, 9) < 2:
+                enemy.status = gear_status
+                enemy.status_duration = 2
+
+            # Decide crit
+            if randint(0, 9) == 0:
+                damage = crit_damage
+                is_critical_hit = True
+            else:
+                damage = base_damage
 
         elif action == 'D':
-            if "Iron Armour" in player.gear:
+            if "Iron Armour" in getattr(player, 'armour', []):
                 print("You defend and brace yourself with your Iron Armour!")
             else:
                 print("You defend and brace yourself!")

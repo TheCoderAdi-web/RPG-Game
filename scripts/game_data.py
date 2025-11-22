@@ -27,6 +27,15 @@ WEAPON_STATUS_EFFECTS: Dict[str, str] = {
     "Fists": "None"
 }
 
+# Categorize gear: which items are weapons vs armours
+WEAPON_LIST: List[str] = list(WEAPON_DAMAGE.keys())
+ARMOUR_LIST: List[str] = ["Iron Armour"]
+
+# Optional: map gear name -> type for easier checks ('weapon'|'armour')
+GEAR_TYPE: Dict[str, str] = {g: 'weapon' for g in WEAPON_LIST}
+for a in ARMOUR_LIST:
+    GEAR_TYPE[a] = 'armour'
+
 # Outcome Codes (Used for robust combat logic)
 class OutcomeCodes:
     PLAYER_DEFEND_SUCCESS = "P_DEF_OK"
@@ -75,14 +84,16 @@ class Enemy:
 class Player:
     """Class representing the player."""
     # Added __slots__ for faster object access and to help with pickling
-    __slots__ = ['x', 'y', 'health', 'max_health', 'gear', 'status', 'status_duration'] 
+    __slots__ = ['x', 'y', 'health', 'max_health', 'weapon', 'armour', 'status', 'status_duration'] 
 
     def __init__(self, y: int, x: int) -> None:
         self.x: int = x
         self.y: int = y
         self.health: int = 5
         self.max_health: int = 5
-        self.gear: str = "Fists"
+        # Explicit equipment: one weapon and multiple armours
+        self.weapon: str = "Fists"
+        self.armour: List[str] = []
         self.status: str = "None"
         self.status_duration: int = 0
     
@@ -130,7 +141,43 @@ class Chest:
         """Opens the chest, giving the player its item."""
         if not self.opened:
             print(f"You found a {self.item}!")
-            player.weapon = self.item
+            # Add the item to the player's gear list with rules:
+            # - Only one weapon allowed at a time: picking a weapon replaces the current weapon.
+            # - Multiple armours allowed; avoid duplicate armours.
+            # Work with explicit player.weapon and player.armour fields
+            # Ensure player has the attributes (for older save compatibility)
+            if not hasattr(player, 'weapon'):
+                player.weapon = "Fists"
+            if not hasattr(player, 'armour'):
+                player.armour = []
+
+            if self.item in WEAPON_LIST:
+                existing_weapon = player.weapon if player.weapon in WEAPON_LIST else None
+                if existing_weapon:
+                    # Prompt to replace or keep
+                    while True:
+                        choice = input(f"You found a {self.item} but you already have {existing_weapon}. Replace it? (Y/N): ").strip().upper()
+                        if choice == 'Y':
+                            print(f"You replaced your {existing_weapon} with {self.item}.")
+                            player.weapon = self.item
+                            break
+                        elif choice == 'N':
+                            print(f"You decided to keep your {existing_weapon}.")
+                            break
+                        else:
+                            print("Invalid input. Please enter 'Y' or 'N'.")
+                else:
+                    player.weapon = self.item
+
+            elif self.item in ARMOUR_LIST:
+                # Add armour if not already present
+                if self.item not in player.armour:
+                    player.armour.append(self.item)
+
+            else:
+                # Fallback: if unknown item is a string, try to add to armour
+                if self.item not in player.armour:
+                    player.armour.append(self.item)
             self.opened = True
             input("Press Enter to continue...")
         else:
